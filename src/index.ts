@@ -6,6 +6,7 @@ import type { MysticClient, Command } from './types';
 import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
+import { setupTikTokNotify } from './utils/tiktokNotify';
 
 dotenv.config();
 
@@ -161,6 +162,9 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Setup welcome system
   setupWelcome(client);
+
+  // Setup TikTok notifications
+  setupTikTokNotify(client);
 
   // Build slash command data from loaded commands
   const slashCommands = [];
