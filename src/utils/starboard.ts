@@ -1,7 +1,7 @@
 import { EmbedBuilder, Message, TextChannel, PartialMessage, MessageReaction, PartialMessageReaction } from 'discord.js';
 
 // Configuration
-export const STARBOARD_CHANNEL_ID = '1466338916062724150';
+export const STARBOARD_CHANNEL_ID = '1466469752409952266';
 export const STAR_THRESHOLD = 5;
 export const STAR_EMOJIS = ['💀', '😭', '❤️'];
 const STARBOARD_COLOR = 0xFFD700;
