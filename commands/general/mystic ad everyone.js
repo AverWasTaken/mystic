@@ -1,0 +1,26 @@
+const { SlashCommandBuilder } = require('discord.js');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('mysticadeveryone')
+    .setDescription('our servers ad!'),
+
+  async execute(interaction) {
+    await interaction.reply(`# 𝐌𝐲𝐬𝐭𝐢𝐜┃Editing and Resources
+Your ultimate source to up your editing skills.
+<:bluedot:1466392871480594443>What we offer:
+ ・Free After Effects and Plugins
+ ・ Tutorials
+ ・ Edit audios • SFX • Overlays
+ ・ After Effects & Alight Motion free presets
+ ・ Skilled editors • Friendly Community • Active support
+ ・ Grow our skill, level up your edits.
+<:bluedot:1466392871480594443>What we're looking for:
+ ・ Friendly members
+ ・ Editors
+ ・ Boosters
+And you! <:w_whitestar:1466392991597068553>
+[Join Mystic now.](https://discord.gg/M7Z7BquZCS)
+ @everyone <@${interaction.user.id}>! `);
+  },
+};

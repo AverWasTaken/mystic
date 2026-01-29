@@ -1,0 +1,6 @@
+@echo off
+echo Registering slash commands...
+call node deploy-commands.js
+echo Starting bot...
+call node index.js
+pause
