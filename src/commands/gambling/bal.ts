@@ -17,7 +17,7 @@ const command: Command = {
 
   async execute(message: Message, args: string[]): Promise<void> {
     const targetUser = message.mentions.users.first() || message.author;
-    const balance = getBalance(targetUser.id);
+    const balance = await getBalance(targetUser.id);
     
     const embed = new EmbedBuilder()
       .setColor(0xFFD700)
@@ -31,7 +31,7 @@ const command: Command = {
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
     const targetUser = interaction.options.getUser('user') || interaction.user;
-    const balance = getBalance(targetUser.id);
+    const balance = await getBalance(targetUser.id);
     
     const embed = new EmbedBuilder()
       .setColor(0xFFD700)

@@ -77,7 +77,12 @@ function formatHand(hand: Card[], hideFirst = false): string {
   return hand.map(c => `${c.value}${c.suit}`).join(' ');
 }
 
-function createGameEmbed(game: GameState, status: 'playing' | 'win' | 'lose' | 'push' | 'blackjack', hideDealer = true): EmbedBuilder {
+function createGameEmbed(
+  game: GameState, 
+  status: 'playing' | 'win' | 'lose' | 'push' | 'blackjack', 
+  hideDealer = true,
+  newBalance?: number
+): EmbedBuilder {
   const playerTotal = calculateHand(game.playerHand);
   const dealerTotal = calculateHand(game.dealerHand);
   
@@ -114,14 +119,13 @@ function createGameEmbed(game: GameState, status: 'playing' | 'win' | 'lose' | '
       { name: 'Bet', value: `${game.bet.toLocaleString()} coins`, inline: true }
     );
 
-  if (status !== 'playing') {
+  if (status !== 'playing' && newBalance !== undefined) {
     let winnings = 0;
     if (status === 'blackjack') winnings = Math.floor(game.bet * 1.5);
     else if (status === 'win') winnings = game.bet;
     else if (status === 'push') winnings = 0;
     else winnings = -game.bet;
 
-    const newBalance = getBalance(game.userId);
     embed.addFields(
       { name: winnings >= 0 ? 'Winnings' : 'Loss', value: `${Math.abs(winnings).toLocaleString()} coins`, inline: true },
       { name: 'New Balance', value: `${newBalance.toLocaleString()} coins`, inline: true }
@@ -172,15 +176,16 @@ function determineOutcome(game: GameState): 'win' | 'lose' | 'push' | 'blackjack
   return 'push';
 }
 
-async function handleGameEnd(game: GameState, outcome: 'win' | 'lose' | 'push' | 'blackjack'): Promise<void> {
+async function handleGameEnd(game: GameState, outcome: 'win' | 'lose' | 'push' | 'blackjack'): Promise<number> {
   if (outcome === 'blackjack') {
-    addBalance(game.userId, Math.floor(game.bet * 2.5)); // Get back bet + 1.5x winnings
+    return await addBalance(game.userId, Math.floor(game.bet * 2.5)); // Get back bet + 1.5x winnings
   } else if (outcome === 'win') {
-    addBalance(game.userId, game.bet * 2); // Get back bet + winnings
+    return await addBalance(game.userId, game.bet * 2); // Get back bet + winnings
   } else if (outcome === 'push') {
-    addBalance(game.userId, game.bet); // Get back bet
+    return await addBalance(game.userId, game.bet); // Get back bet
   }
   // Lose = nothing returned (already subtracted)
+  return await getBalance(game.userId);
 }
 
 async function runGame(game: GameState, reply: Message): Promise<void> {
@@ -197,18 +202,18 @@ async function runGame(game: GameState, reply: Message): Promise<void> {
 
       if (playerTotal > 21) {
         collector.stop('bust');
-        await handleGameEnd(game, 'lose');
+        const newBalance = await handleGameEnd(game, 'lose');
         await interaction.update({
-          embeds: [createGameEmbed(game, 'lose', false)],
+          embeds: [createGameEmbed(game, 'lose', false, newBalance)],
           components: [createButtons(true)]
         });
       } else if (playerTotal === 21) {
         collector.stop('21');
         await playDealerTurn(game);
         const outcome = determineOutcome(game);
-        await handleGameEnd(game, outcome);
+        const newBalance = await handleGameEnd(game, outcome);
         await interaction.update({
-          embeds: [createGameEmbed(game, outcome, false)],
+          embeds: [createGameEmbed(game, outcome, false, newBalance)],
           components: [createButtons(true)]
         });
       } else {
@@ -221,9 +226,9 @@ async function runGame(game: GameState, reply: Message): Promise<void> {
       collector.stop('stand');
       await playDealerTurn(game);
       const outcome = determineOutcome(game);
-      await handleGameEnd(game, outcome);
+      const newBalance = await handleGameEnd(game, outcome);
       await interaction.update({
-        embeds: [createGameEmbed(game, outcome, false)],
+        embeds: [createGameEmbed(game, outcome, false, newBalance)],
         components: [createButtons(true)]
       });
     }
@@ -234,9 +239,9 @@ async function runGame(game: GameState, reply: Message): Promise<void> {
       // Auto-stand on timeout
       await playDealerTurn(game);
       const outcome = determineOutcome(game);
-      await handleGameEnd(game, outcome);
+      const newBalance = await handleGameEnd(game, outcome);
       await reply.edit({
-        embeds: [createGameEmbed(game, outcome, false)],
+        embeds: [createGameEmbed(game, outcome, false, newBalance)],
         components: [createButtons(true)]
       });
     }
@@ -262,20 +267,20 @@ const command: Command = {
       return;
     }
 
-    const betAmount = parseBetAmount(message.author.id, args[0]);
+    const betAmount = await parseBetAmount(message.author.id, args[0]);
     if (betAmount === null) {
       await message.reply('❌ Invalid bet amount. Use a positive number or "all".');
       return;
     }
 
-    if (!hasEnough(message.author.id, betAmount)) {
-      const balance = getBalance(message.author.id);
+    if (!(await hasEnough(message.author.id, betAmount))) {
+      const balance = await getBalance(message.author.id);
       await message.reply(`❌ You don't have enough coins! Your balance: **${balance.toLocaleString()}** coins`);
       return;
     }
 
     // Deduct bet upfront
-    subtractBalance(message.author.id, betAmount);
+    await subtractBalance(message.author.id, betAmount);
 
     const deck = createDeck();
     const game: GameState = {
@@ -290,9 +295,9 @@ const command: Command = {
     const playerTotal = calculateHand(game.playerHand);
     if (playerTotal === 21) {
       const outcome = determineOutcome(game);
-      await handleGameEnd(game, outcome);
+      const newBalance = await handleGameEnd(game, outcome);
       await message.reply({
-        embeds: [createGameEmbed(game, outcome, false)],
+        embeds: [createGameEmbed(game, outcome, false, newBalance)],
         components: [createButtons(true)]
       });
       return;
@@ -309,20 +314,20 @@ const command: Command = {
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
     const amountInput = interaction.options.getString('amount', true);
 
-    const betAmount = parseBetAmount(interaction.user.id, amountInput);
+    const betAmount = await parseBetAmount(interaction.user.id, amountInput);
     if (betAmount === null) {
       await interaction.reply({ content: '❌ Invalid bet amount. Use a positive number or "all".', ephemeral: true });
       return;
     }
 
-    if (!hasEnough(interaction.user.id, betAmount)) {
-      const balance = getBalance(interaction.user.id);
+    if (!(await hasEnough(interaction.user.id, betAmount))) {
+      const balance = await getBalance(interaction.user.id);
       await interaction.reply({ content: `❌ You don't have enough coins! Your balance: **${balance.toLocaleString()}** coins`, ephemeral: true });
       return;
     }
 
     // Deduct bet upfront
-    subtractBalance(interaction.user.id, betAmount);
+    await subtractBalance(interaction.user.id, betAmount);
 
     const deck = createDeck();
     const game: GameState = {
@@ -337,9 +342,9 @@ const command: Command = {
     const playerTotal = calculateHand(game.playerHand);
     if (playerTotal === 21) {
       const outcome = determineOutcome(game);
-      await handleGameEnd(game, outcome);
+      const newBalance = await handleGameEnd(game, outcome);
       await interaction.reply({
-        embeds: [createGameEmbed(game, outcome, false)],
+        embeds: [createGameEmbed(game, outcome, false, newBalance)],
         components: [createButtons(true)]
       });
       return;
@@ -365,18 +370,18 @@ const command: Command = {
 
         if (total > 21) {
           collector.stop('bust');
-          await handleGameEnd(game, 'lose');
+          const newBalance = await handleGameEnd(game, 'lose');
           await buttonInteraction.update({
-            embeds: [createGameEmbed(game, 'lose', false)],
+            embeds: [createGameEmbed(game, 'lose', false, newBalance)],
             components: [createButtons(true)]
           });
         } else if (total === 21) {
           collector.stop('21');
           await playDealerTurn(game);
           const outcome = determineOutcome(game);
-          await handleGameEnd(game, outcome);
+          const newBalance = await handleGameEnd(game, outcome);
           await buttonInteraction.update({
-            embeds: [createGameEmbed(game, outcome, false)],
+            embeds: [createGameEmbed(game, outcome, false, newBalance)],
             components: [createButtons(true)]
           });
         } else {
@@ -389,9 +394,9 @@ const command: Command = {
         collector.stop('stand');
         await playDealerTurn(game);
         const outcome = determineOutcome(game);
-        await handleGameEnd(game, outcome);
+        const newBalance = await handleGameEnd(game, outcome);
         await buttonInteraction.update({
-          embeds: [createGameEmbed(game, outcome, false)],
+          embeds: [createGameEmbed(game, outcome, false, newBalance)],
           components: [createButtons(true)]
         });
       }
@@ -401,9 +406,9 @@ const command: Command = {
       if (reason === 'time') {
         await playDealerTurn(game);
         const outcome = determineOutcome(game);
-        await handleGameEnd(game, outcome);
+        const newBalance = await handleGameEnd(game, outcome);
         await interaction.editReply({
-          embeds: [createGameEmbed(game, outcome, false)],
+          embeds: [createGameEmbed(game, outcome, false, newBalance)],
           components: [createButtons(true)]
         });
       }

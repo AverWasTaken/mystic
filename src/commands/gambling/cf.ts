@@ -43,14 +43,14 @@ const command: Command = {
       return;
     }
 
-    const betAmount = parseBetAmount(message.author.id, args[0]);
+    const betAmount = await parseBetAmount(message.author.id, args[0]);
     if (betAmount === null) {
       await message.reply('❌ Invalid bet amount. Use a positive number or "all".');
       return;
     }
 
-    if (!hasEnough(message.author.id, betAmount)) {
-      const balance = getBalance(message.author.id);
+    if (!(await hasEnough(message.author.id, betAmount))) {
+      const balance = await getBalance(message.author.id);
       await message.reply(`❌ You don't have enough coins! Your balance: **${balance.toLocaleString()}** coins`);
       return;
     }
@@ -66,9 +66,9 @@ const command: Command = {
     
     let newBalance: number;
     if (won) {
-      newBalance = addBalance(message.author.id, betAmount);
+      newBalance = await addBalance(message.author.id, betAmount);
     } else {
-      newBalance = subtractBalance(message.author.id, betAmount);
+      newBalance = await subtractBalance(message.author.id, betAmount);
     }
 
     const emoji = result === 'heads' ? '🪙' : '⚪';
@@ -92,14 +92,14 @@ const command: Command = {
     const amountInput = interaction.options.getString('amount', true);
     const choice = interaction.options.getString('choice', true) as CoinSide;
 
-    const betAmount = parseBetAmount(interaction.user.id, amountInput);
+    const betAmount = await parseBetAmount(interaction.user.id, amountInput);
     if (betAmount === null) {
       await interaction.reply({ content: '❌ Invalid bet amount. Use a positive number or "all".', ephemeral: true });
       return;
     }
 
-    if (!hasEnough(interaction.user.id, betAmount)) {
-      const balance = getBalance(interaction.user.id);
+    if (!(await hasEnough(interaction.user.id, betAmount))) {
+      const balance = await getBalance(interaction.user.id);
       await interaction.reply({ content: `❌ You don't have enough coins! Your balance: **${balance.toLocaleString()}** coins`, ephemeral: true });
       return;
     }
@@ -109,9 +109,9 @@ const command: Command = {
     
     let newBalance: number;
     if (won) {
-      newBalance = addBalance(interaction.user.id, betAmount);
+      newBalance = await addBalance(interaction.user.id, betAmount);
     } else {
-      newBalance = subtractBalance(interaction.user.id, betAmount);
+      newBalance = await subtractBalance(interaction.user.id, betAmount);
     }
 
     const emoji = result === 'heads' ? '🪙' : '⚪';
