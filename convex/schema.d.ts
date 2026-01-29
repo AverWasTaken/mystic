@@ -28,6 +28,15 @@ declare const _default: import("convex/server").SchemaDefinition<{
     }, "required", "userId" | "lastClaim">, {
         by_userId: ["userId", "_creationTime"];
     }, {}, {}>;
+    userPrefixes: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        userId: string;
+        prefix: string;
+    }, {
+        userId: import("convex/values").VString<string, "required">;
+        prefix: import("convex/values").VString<string, "required">;
+    }, "required", "userId" | "prefix">, {
+        by_userId: ["userId", "_creationTime"];
+    }, {}, {}>;
     warnings: import("convex/server").TableDefinition<import("convex/values").VObject<{
         timestamp: number;
         oduserId: string;
@@ -40,15 +49,6 @@ declare const _default: import("convex/server").SchemaDefinition<{
         timestamp: import("convex/values").VFloat64<number, "required">;
     }, "required", "timestamp" | "oduserId" | "odmoderatorId" | "reason">, {
         by_oduserId: ["oduserId", "_creationTime"];
-    }, {}, {}>;
-    userPrefixes: import("convex/server").TableDefinition<import("convex/values").VObject<{
-        userId: string;
-        prefix: string;
-    }, {
-        userId: import("convex/values").VString<string, "required">;
-        prefix: import("convex/values").VString<string, "required">;
-    }, "required", "userId" | "prefix">, {
-        by_userId: ["userId", "_creationTime"];
     }, {}, {}>;
 }, true>;
 export default _default;

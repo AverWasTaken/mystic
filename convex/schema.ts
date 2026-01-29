@@ -18,15 +18,15 @@ export default defineSchema({
     lastClaim: v.number(),
   }).index("by_userId", ["userId"]),
 
+  userPrefixes: defineTable({
+    userId: v.string(),
+    prefix: v.string(),
+  }).index("by_userId", ["userId"]),
+
   warnings: defineTable({
     oduserId: v.string(),
     odmoderatorId: v.string(),
     reason: v.string(),
     timestamp: v.number(),
   }).index("by_oduserId", ["oduserId"]),
-
-  userPrefixes: defineTable({
-    userId: v.string(),
-    prefix: v.string(),
-  }).index("by_userId", ["userId"]),
 });

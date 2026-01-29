@@ -2,8 +2,8 @@ import { EmbedBuilder, Message, TextChannel, PartialMessage, MessageReaction, Pa
 
 // Configuration
 export const STARBOARD_CHANNEL_ID = '1466338916062724150';
-export const STAR_THRESHOLD = 3;
-export const STAR_EMOJI = '⭐';
+export const STAR_THRESHOLD = 5;
+export const STAR_EMOJIS = ['💀', '😭', '❤️'];
 const STARBOARD_COLOR = 0xFFD700;
 
 // Track posted messages: originalMessageId -> starboardMessageId
@@ -12,7 +12,7 @@ const starboardPosts = new Map<string, string>();
 /**
  * Build the starboard embed for a message
  */
-function buildStarboardEmbed(message: Message, starCount: number): EmbedBuilder {
+function buildStarboardEmbed(message: Message, starCount: number, emoji: string): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setColor(STARBOARD_COLOR)
     .setAuthor({
@@ -25,7 +25,7 @@ function buildStarboardEmbed(message: Message, starCount: number): EmbedBuilder 
       value: `[Jump to message](${message.url})`,
       inline: true
     })
-    .setFooter({ text: `⭐ ${starCount} | #${(message.channel as TextChannel).name}` })
+    .setFooter({ text: `${emoji} ${starCount} | #${(message.channel as TextChannel).name}` })
     .setTimestamp(message.createdAt);
 
   // Add first image attachment if present
@@ -55,8 +55,9 @@ export async function handleStarboardReaction(
     }
   }
 
-  // Only handle star emoji
-  if (reaction.emoji.name !== STAR_EMOJI) return;
+  // Only handle starboard emojis
+  const emojiName = reaction.emoji.name;
+  if (!emojiName || !STAR_EMOJIS.includes(emojiName)) return;
 
   // Fetch partial message if needed
   let message = reaction.message;
@@ -87,7 +88,7 @@ export async function handleStarboardReaction(
     return;
   }
 
-  const embed = buildStarboardEmbed(message as Message, starCount);
+  const embed = buildStarboardEmbed(message as Message, starCount, emojiName);
   const existingPostId = starboardPosts.get(message.id);
 
   if (existingPostId) {

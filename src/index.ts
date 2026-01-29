@@ -146,9 +146,10 @@ client.on(Events.MessageCreate, async message => {
     return;
   }
 
-  // Check for prefix
-  if (message.content.startsWith(PREFIX)) {
-    const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
+  // Check for prefix (default or user's custom prefix)
+  const matchedPrefix = getMatchedPrefix(message.content, message.author.id);
+  if (matchedPrefix) {
+    const args = message.content.slice(matchedPrefix.length).trim().split(/\s+/);
     const commandName = args.shift()?.toLowerCase();
 
     if (!commandName) return;
@@ -325,6 +326,9 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Setup TikTok notifications
   setupTikTokNotify(client);
+
+  // Initialize prefix system (load cache)
+  await initPrefixSystem();
 
   // Build slash command data from loaded commands
   const slashCommands = [];
