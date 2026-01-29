@@ -252,11 +252,11 @@ export async function handleEditingAssistant(message: Message): Promise<void> {
 export async function isBotMentionOrReply(message: Message, botId: string): Promise<boolean> {
   if (message.author.bot) return false;
   
-  // Direct mention
+  // Direct mention - always trigger
   if (message.mentions.has(botId)) return true;
   
-  // Reply to bot's message
-  if (message.reference?.messageId) {
+  // Reply to bot's message - only if user has an active conversation
+  if (message.reference?.messageId && conversations.has(message.author.id)) {
     try {
       const repliedTo = await message.channel.messages.fetch(message.reference.messageId);
       if (repliedTo.author.id === botId) return true;
