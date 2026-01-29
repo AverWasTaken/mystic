@@ -9,6 +9,8 @@ import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
 import { getAfk, getAfkByIds, removeAfk, formatDuration } from './utils/afk';
 import { setSnipe } from './utils/snipe';
+import { logMessageEdit, logMessageDelete, logMemberJoin, logMemberLeave } from './utils/logs';
+import { handleStarboardReaction } from './utils/starboard';
 
 dotenv.config();
 
@@ -194,6 +196,14 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   // Ignore bots
   if (user.bot) return;
 
+  // Handle starboard
+  try {
+    await handleStarboardReaction(reaction);
+  } catch (err) {
+    console.error('Error handling starboard reaction:', err);
+  }
+
+  // Handle AFK removal
   try {
     const result = await removeAfk(user.id);
     if (result.removed) {

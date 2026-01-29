@@ -19,6 +19,15 @@ declare const _default: import("convex/server").SchemaDefinition<{
     }, "required", "message" | "userId" | "timestamp">, {
         by_userId: ["userId", "_creationTime"];
     }, {}, {}>;
+    dailyClaims: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        userId: string;
+        lastClaim: number;
+    }, {
+        userId: import("convex/values").VString<string, "required">;
+        lastClaim: import("convex/values").VFloat64<number, "required">;
+    }, "required", "userId" | "lastClaim">, {
+        by_userId: ["userId", "_creationTime"];
+    }, {}, {}>;
 }, true>;
 export default _default;
 //# sourceMappingURL=schema.d.ts.map

@@ -53,3 +53,11 @@ export async function parseBetAmount(userId: string, input: string): Promise<num
   
   return amount;
 }
+
+export async function claimDaily(userId: string): Promise<{ success: boolean; reward?: number; newBalance?: number; cooldownRemaining?: number }> {
+  return await getClient().mutation(api.economy.claimDaily, { userId });
+}
+
+export async function getLeaderboard(limit: number = 10): Promise<{ rank: number; userId: string; balance: number }[]> {
+  return await getClient().query(api.economy.getLeaderboard, { limit });
+}

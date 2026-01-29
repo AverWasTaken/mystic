@@ -12,4 +12,9 @@ export default defineSchema({
     message: v.string(),
     timestamp: v.number(),
   }).index("by_userId", ["userId"]),
+
+  dailyClaims: defineTable({
+    userId: v.string(),
+    lastClaim: v.number(),
+  }).index("by_userId", ["userId"]),
 });

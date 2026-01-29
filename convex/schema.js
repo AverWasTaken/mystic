@@ -12,5 +12,9 @@ exports.default = (0, server_1.defineSchema)({
         message: values_1.v.string(),
         timestamp: values_1.v.number(),
     }).index("by_userId", ["userId"]),
+    dailyClaims: (0, server_1.defineTable)({
+        userId: values_1.v.string(),
+        lastClaim: values_1.v.number(),
+    }).index("by_userId", ["userId"]),
 });
 //# sourceMappingURL=schema.js.map
