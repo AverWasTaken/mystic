@@ -1,7 +1,10 @@
-import { Client, EmbedBuilder, Message, GuildMember, PartialMessage, TextChannel } from 'discord.js';
+import { Client, EmbedBuilder, Message, GuildMember, PartialMessage, WebhookClient } from 'discord.js';
 
-// Change this to your logging channel ID
-export const LOG_CHANNEL_ID = '1466338916062724150';
+// Webhook URL for logging
+const LOG_WEBHOOK_URL = 'https://discord.com/api/webhooks/1466453167603585219/U16NtgGrIRw68kMCj2cLFbn9jf7VHBweP1Vet2BlKYR8ILlWYgkSpF9xjrm8L9Vn18kC';
+
+// Create webhook client
+const webhookClient = new WebhookClient({ url: LOG_WEBHOOK_URL });
 
 // Colors
 const COLORS = {
@@ -11,27 +14,11 @@ const COLORS = {
   LEAVE: 0xE67E22    // Orange
 };
 
-async function getLogChannel(client: Client): Promise<TextChannel | null> {
-  try {
-    const channel = await client.channels.fetch(LOG_CHANNEL_ID);
-    if (channel?.isTextBased() && 'send' in channel) {
-      return channel as TextChannel;
-    }
-    return null;
-  } catch (err) {
-    console.error('[LOGS] Failed to fetch log channel:', err);
-    return null;
-  }
-}
-
 export async function logMessageEdit(
   client: Client,
   oldMessage: Message | PartialMessage,
   newMessage: Message | PartialMessage
 ): Promise<void> {
-  const logChannel = await getLogChannel(client);
-  if (!logChannel) return;
-
   // Skip if content didn't change (e.g., embed updates)
   if (oldMessage.content === newMessage.content) return;
 
@@ -40,7 +27,6 @@ export async function logMessageEdit(
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.EDIT)
-    .setTitle('✏️ Message Edited')
     .setAuthor({
       name: newMessage.author?.tag || 'Unknown User',
       iconURL: newMessage.author?.displayAvatarURL() || undefined
@@ -60,7 +46,10 @@ export async function logMessageEdit(
   }
 
   try {
-    await logChannel.send({ embeds: [embed] });
+    await webhookClient.send({
+      username: '✏️ Message Edited',
+      embeds: [embed]
+    });
   } catch (err) {
     console.error('[LOGS] Failed to send edit log:', err);
   }
@@ -70,14 +59,10 @@ export async function logMessageDelete(
   client: Client,
   message: Message | PartialMessage
 ): Promise<void> {
-  const logChannel = await getLogChannel(client);
-  if (!logChannel) return;
-
   const content = message.content || '*[Content unavailable - message was not cached]*';
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.DELETE)
-    .setTitle('🗑️ Message Deleted')
     .setAuthor({
       name: message.author?.tag || 'Unknown User',
       iconURL: message.author?.displayAvatarURL() || undefined
@@ -97,16 +82,16 @@ export async function logMessageDelete(
   }
 
   try {
-    await logChannel.send({ embeds: [embed] });
+    await webhookClient.send({
+      username: '🗑️ Message Deleted',
+      embeds: [embed]
+    });
   } catch (err) {
     console.error('[LOGS] Failed to send delete log:', err);
   }
 }
 
 export async function logMemberJoin(client: Client, member: GuildMember): Promise<void> {
-  const logChannel = await getLogChannel(client);
-  if (!logChannel) return;
-
   // Calculate account age
   const createdAt = member.user.createdAt;
   const now = new Date();
@@ -133,7 +118,6 @@ export async function logMemberJoin(client: Client, member: GuildMember): Promis
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.JOIN)
-    .setTitle('👋 Member Joined')
     .setAuthor({
       name: member.user.tag,
       iconURL: member.user.displayAvatarURL()
@@ -149,16 +133,17 @@ export async function logMemberJoin(client: Client, member: GuildMember): Promis
     .setTimestamp();
 
   try {
-    await logChannel.send({ embeds: [embed] });
+    await webhookClient.send({
+      username: '👋 Member Joined',
+      avatarURL: member.user.displayAvatarURL(),
+      embeds: [embed]
+    });
   } catch (err) {
     console.error('[LOGS] Failed to send join log:', err);
   }
 }
 
 export async function logMemberLeave(client: Client, member: GuildMember): Promise<void> {
-  const logChannel = await getLogChannel(client);
-  if (!logChannel) return;
-
   // Calculate how long they were in the server
   const joinedAt = member.joinedAt;
   let membershipDuration = 'Unknown';
@@ -190,7 +175,6 @@ export async function logMemberLeave(client: Client, member: GuildMember): Promi
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.LEAVE)
-    .setTitle('👋 Member Left')
     .setAuthor({
       name: member.user.tag,
       iconURL: member.user.displayAvatarURL()
@@ -210,7 +194,11 @@ export async function logMemberLeave(client: Client, member: GuildMember): Promi
   }
 
   try {
-    await logChannel.send({ embeds: [embed] });
+    await webhookClient.send({
+      username: '👋 Member Left',
+      avatarURL: member.user.displayAvatarURL(),
+      embeds: [embed]
+    });
   } catch (err) {
     console.error('[LOGS] Failed to send leave log:', err);
   }
