@@ -161,54 +161,25 @@ client.on(Events.MessageCreate, async message => {
     return;
   }
 
-  // Handle bot mentions and replies to bot messages
-  if (client.user) {
-    const botId = client.user.id;
-    const hasMention = message.content.includes(`<@${botId}>`) || message.content.includes(`<@!${botId}>`);
-    
-    // Check if this is a reply to a bot message
-    let isReplyToBot = false;
-    if (message.reference?.messageId) {
-      try {
-        const repliedTo = await message.channel.messages.fetch(message.reference.messageId);
-        isReplyToBot = repliedTo.author.id === botId;
-      } catch {
-        // Failed to fetch referenced message
-      }
-    }
-    
-    // Handle @mentions (always start/continue convo)
-    if (hasMention) {
-      const strippedContent = message.content
-        .replace(new RegExp(`<@!?${botId}>`, 'g'), '')
-        .trim();
-      
-      const helpCommand = client.commands.get('help');
-      if (helpCommand) {
-        const args = strippedContent ? strippedContent.split(/\s+/) : [];
-        try {
-          await helpCommand.execute(message, args);
-        } catch (error) {
-          console.error('[Help via mention] Error:', error);
-          await message.reply('Something went wrong, try again.');
+  // Handle replies to bot messages (only if user has active help conversation)
+  if (client.user && message.reference?.messageId) {
+    try {
+      const repliedTo = await message.channel.messages.fetch(message.reference.messageId);
+      if (repliedTo.author.id === client.user.id && hasActiveConversation(message.author.id)) {
+        const helpCommand = client.commands.get('help');
+        if (helpCommand) {
+          const args = message.content.trim().split(/\s+/);
+          try {
+            await helpCommand.execute(message, args);
+          } catch (error) {
+            console.error('[Help via reply] Error:', error);
+            await message.reply('Something went wrong, try again.');
+          }
         }
+        return;
       }
-      return;
-    }
-    
-    // Handle replies to bot messages (only if user has active conversation)
-    if (isReplyToBot && hasActiveConversation(message.author.id)) {
-      const helpCommand = client.commands.get('help');
-      if (helpCommand) {
-        const args = message.content.trim().split(/\s+/);
-        try {
-          await helpCommand.execute(message, args);
-        } catch (error) {
-          console.error('[Help via reply] Error:', error);
-          await message.reply('Something went wrong, try again.');
-        }
-      }
-      return;
+    } catch {
+      // Failed to fetch referenced message
     }
   }
 
