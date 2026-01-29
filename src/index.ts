@@ -8,6 +8,7 @@ import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
 import { getAfk, getAfkByIds, removeAfk, formatDuration } from './utils/afk';
+import { setSnipe } from './utils/snipe';
 
 dotenv.config();
 
@@ -224,6 +225,19 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   } catch (err) {
     console.error('Error removing AFK on reaction:', err);
   }
+});
+
+// Handle message deletions for snipe
+client.on(Events.MessageDelete, async message => {
+  // Ignore partial messages without content, bot messages, and DMs
+  if (!message.content || message.author?.bot || !message.guild) return;
+
+  setSnipe(message.channel.id, {
+    content: message.content,
+    authorTag: message.author?.tag || 'Unknown',
+    authorAvatar: message.author?.displayAvatarURL() || null,
+    deletedAt: Date.now()
+  });
 });
 
 // Handle slash commands
