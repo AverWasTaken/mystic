@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials, EmbedBuilder } from 'discord.js';
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
-import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
+// editingAssistant removed - bot mentions now use the help command
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
@@ -160,10 +160,30 @@ client.on(Events.MessageCreate, async message => {
     return;
   }
 
-  // Handle bot mentions/replies for editing assistant (after checking for commands)
-  if (client.user && await isBotMentionOrReply(message, client.user.id)) {
-    await handleEditingAssistant(message);
-    return;
+  // Handle bot mentions - use the help command
+  if (client.user) {
+    const botId = client.user.id;
+    const hasMention = message.content.includes(`<@${botId}>`) || message.content.includes(`<@!${botId}>`);
+    
+    if (hasMention) {
+      // Strip the mention and use the rest as the message
+      const strippedContent = message.content
+        .replace(new RegExp(`<@!?${botId}>`, 'g'), '')
+        .trim();
+      
+      // Get the help command and execute it
+      const helpCommand = client.commands.get('help');
+      if (helpCommand) {
+        const args = strippedContent ? strippedContent.split(/\s+/) : [];
+        try {
+          await helpCommand.execute(message, args);
+        } catch (error) {
+          console.error('[Help via mention] Error:', error);
+          await message.reply('Something went wrong, try again.');
+        }
+      }
+      return;
+    }
   }
 
   // Only process non-command messages below
