@@ -15,6 +15,16 @@ const reactionRoles: Record<string, Record<string, string>> = {
     '⚡': '1466107468189798431', // Shake audio ping
     '🎬': '1466107497562505327', // Film audio ping
   },
+  // Notification Pings
+  '1466445480149127356': {
+    'tiktok': '1466444788441284847', // TikTok Ping
+    '💀': '1466444830145249290', // Skull Ping
+  },
+  // Color Roles
+  '1466445484880302368': {
+    '🔵': '1466444863439376657', // Blue
+    '🟣': '1466444921002131681', // Purple
+  },
 };
 
 export function setupReactionRoles(client: Client): void {
