@@ -1,4 +1,4 @@
-import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
+import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
 
 interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -20,16 +20,7 @@ const MAX_HISTORY = 10;
 // Conversation timeout (10 minutes)
 const CONVERSATION_TIMEOUT_MS = 10 * 60 * 1000;
 
-const SYSTEM_PROMPT = `You are a friendly and knowledgeable video editing assistant. You help with questions about:
-- Adobe After Effects (motion graphics, compositing, effects, expressions)
-- Adobe Premiere Pro (editing, color grading, audio, workflows)
-- DaVinci Resolve (editing, color, Fusion, Fairlight)
-- General video editing concepts (transitions, pacing, storytelling)
-- Codec and export settings
-- Hardware recommendations for editing
-- Tips and tricks for better edits
-
-Be conversational, helpful, and encouraging. Keep responses concise but informative. If you don't know something, say so. Use examples when helpful. Feel free to ask clarifying questions if the user's question is vague.`;
+const SYSTEM_PROMPT = `You are a helpful video editing assistant. Keep responses SHORT and to the point - aim for 1-3 sentences when possible. Only elaborate if the question requires it. No fluff, no unnecessary encouragement, just helpful answers about After Effects, Premiere, DaVinci Resolve, and video editing in general.`;
 
 /**
  * Call OpenRouter API with Gemini model
@@ -119,8 +110,11 @@ export async function handleEditingAssistant(message: Message): Promise<void> {
   
   // If they just pinged without a message
   if (!userMessage) {
+    const embed = new EmbedBuilder()
+      .setDescription('Ask me anything about video editing!')
+      .setColor(0x9B59B6);
     await message.reply({
-      content: 'Hey! I\'m your editing assistant. 🎬 Ask me anything about video editing, After Effects, Premiere, or any editing software!',
+      embeds: [embed],
       components: [createEndButton()]
     });
     return;
@@ -176,89 +170,75 @@ export async function handleEditingAssistant(message: Message): Promise<void> {
       conversation.messages = conversation.messages.slice(-MAX_HISTORY);
     }
 
-    // Split response if too long for Discord (2000 char limit)
-    const maxLength = 1900; // Leave room for button
-    const chunks: string[] = [];
-    
-    let remaining = assistantResponse;
-    while (remaining.length > 0) {
-      if (remaining.length <= maxLength) {
-        chunks.push(remaining);
-        break;
-      }
-      
-      // Find a good break point
-      let breakPoint = remaining.lastIndexOf('\n', maxLength);
-      if (breakPoint === -1 || breakPoint < maxLength / 2) {
-        breakPoint = remaining.lastIndexOf(' ', maxLength);
-      }
-      if (breakPoint === -1 || breakPoint < maxLength / 2) {
-        breakPoint = maxLength;
-      }
-      
-      chunks.push(remaining.slice(0, breakPoint));
-      remaining = remaining.slice(breakPoint).trim();
-    }
+    // Create embed response
+    const embed = new EmbedBuilder()
+      .setDescription(assistantResponse.slice(0, 4096)) // Embed description limit
+      .setColor(0x9B59B6);
 
-    // Send response(s)
-    for (let i = 0; i < chunks.length; i++) {
-      const isLastChunk = i === chunks.length - 1;
-      const replyOptions: { content: string; components?: ActionRowBuilder<ButtonBuilder>[] } = {
-        content: chunks[i]
-      };
-      
-      // Only add button to last chunk
-      if (isLastChunk) {
-        replyOptions.components = [createEndButton()];
+    const reply = await message.reply({
+      embeds: [embed],
+      components: [createEndButton()]
+    });
+
+    // Set up button collector
+    const collector = reply.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      filter: (i) => i.customId === 'end_editing_conversation' && i.user.id === userId,
+      time: CONVERSATION_TIMEOUT_MS,
+      max: 1
+    });
+
+    collector.on('collect', async (interaction) => {
+      clearConversation(userId);
+      const endEmbed = new EmbedBuilder()
+        .setDescription(assistantResponse.slice(0, 4000) + '\n\n*Conversation ended.*')
+        .setColor(0x9B59B6);
+      await interaction.update({
+        embeds: [endEmbed],
+        components: []
+      });
+    });
+
+    collector.on('end', async (collected, reason) => {
+      if (reason === 'time' && collected.size === 0) {
+        try {
+          await reply.edit({ components: [] });
+        } catch {
+          // Message may have been deleted
+        }
       }
-
-      const reply = await message.reply(replyOptions);
-
-      // Set up button collector only for the message with the button
-      if (isLastChunk) {
-        const collector = reply.createMessageComponentCollector({
-          componentType: ComponentType.Button,
-          filter: (i) => i.customId === 'end_editing_conversation' && i.user.id === userId,
-          time: CONVERSATION_TIMEOUT_MS,
-          max: 1
-        });
-
-        collector.on('collect', async (interaction) => {
-          clearConversation(userId);
-          await interaction.update({
-            content: chunks[i] + '\n\n*Conversation ended. Ping me again to start a new one!*',
-            components: []
-          });
-        });
-
-        collector.on('end', async (collected, reason) => {
-          if (reason === 'time' && collected.size === 0) {
-            // Just remove the button if it timed out
-            try {
-              await reply.edit({
-                content: chunks[i],
-                components: []
-              });
-            } catch {
-              // Message may have been deleted
-            }
-          }
-        });
-      }
-    }
+    });
 
   } catch (error) {
     console.error('[EditingAssistant] Error:', error);
+    const errorEmbed = new EmbedBuilder()
+      .setDescription('Something went wrong. Try again!')
+      .setColor(0xE74C3C);
     await message.reply({
-      content: 'Sorry, I ran into an issue processing your request. Please try again!',
+      embeds: [errorEmbed],
       components: [createEndButton()]
     });
   }
 }
 
 /**
- * Check if a message is a bot mention
+ * Check if a message is a bot mention or reply to the bot
  */
-export function isBotMention(message: Message, botId: string): boolean {
-  return message.mentions.has(botId) && !message.author.bot;
+export async function isBotMentionOrReply(message: Message, botId: string): Promise<boolean> {
+  if (message.author.bot) return false;
+  
+  // Direct mention
+  if (message.mentions.has(botId)) return true;
+  
+  // Reply to bot's message
+  if (message.reference?.messageId) {
+    try {
+      const repliedTo = await message.channel.messages.fetch(message.reference.messageId);
+      if (repliedTo.author.id === botId) return true;
+    } catch {
+      // Failed to fetch referenced message
+    }
+  }
+  
+  return false;
 }

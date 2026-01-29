@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType } from 'discord.js';
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
-import { handleEditingAssistant, isBotMention } from './utils/editingAssistant';
+import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
 
 dotenv.config();
 
@@ -57,8 +57,8 @@ client.on(Events.MessageCreate, async message => {
   // Ignore bots
   if (message.author.bot) return;
 
-  // Handle bot mentions for editing assistant
-  if (client.user && isBotMention(message, client.user.id)) {
+  // Handle bot mentions/replies for editing assistant
+  if (client.user && await isBotMentionOrReply(message, client.user.id)) {
     await handleEditingAssistant(message);
     return;
   }
