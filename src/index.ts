@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials } from 'discord.js';
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
 import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
@@ -17,6 +17,11 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildMembers
+  ],
+  partials: [
+    Partials.Message,
+    Partials.Channel,
+    Partials.Reaction
   ]
 }) as MysticClient;
 
