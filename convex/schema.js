@@ -7,5 +7,10 @@ exports.default = (0, server_1.defineSchema)({
         userId: values_1.v.string(),
         balance: values_1.v.number(),
     }).index("by_userId", ["userId"]),
+    afk: (0, server_1.defineTable)({
+        userId: values_1.v.string(),
+        message: values_1.v.string(),
+        timestamp: values_1.v.number(),
+    }).index("by_userId", ["userId"]),
 });
 //# sourceMappingURL=schema.js.map

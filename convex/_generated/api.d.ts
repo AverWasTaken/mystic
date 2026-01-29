@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as afk from "../afk.js";
 import type * as economy from "../economy.js";
 
 import type {
@@ -17,6 +18,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  afk: typeof afk;
   economy: typeof economy;
 }>;
 

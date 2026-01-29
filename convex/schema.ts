@@ -6,4 +6,10 @@ export default defineSchema({
     userId: v.string(),
     balance: v.number(),
   }).index("by_userId", ["userId"]),
+
+  afk: defineTable({
+    userId: v.string(),
+    message: v.string(),
+    timestamp: v.number(),
+  }).index("by_userId", ["userId"]),
 });

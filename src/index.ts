@@ -1,12 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials, EmbedBuilder } from 'discord.js';
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
 import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
+import { getAfk, getAfkByIds, removeAfk, formatDuration } from './utils/afk';
 
 dotenv.config();
 
@@ -62,10 +63,77 @@ for (const folder of commandFolders) {
   }
 }
 
+const AFK_PURPLE = 0x9B59B6;
+
 // Handle prefix commands
 client.on(Events.MessageCreate, async message => {
   // Ignore bots
   if (message.author.bot) return;
+
+  // === AFK System ===
+  // Check if the message author is AFK and remove their status
+  try {
+    const result = await removeAfk(message.author.id);
+    if (result.removed) {
+      const duration = formatDuration(result.duration);
+      const embed = new EmbedBuilder()
+        .setColor(AFK_PURPLE)
+        .setTitle('👋 Welcome Back!')
+        .setDescription(`You were AFK for **${duration}**`)
+        .setTimestamp();
+      
+      await message.reply({ embeds: [embed] });
+    }
+  } catch (err) {
+    console.error('Error checking/removing AFK status:', err);
+  }
+
+  // Check if message mentions any AFK users
+  try {
+    // Collect mentioned user IDs (from mentions and reply)
+    const mentionedUserIds = new Set<string>();
+    
+    // Direct mentions
+    message.mentions.users.forEach(user => {
+      if (!user.bot && user.id !== message.author.id) {
+        mentionedUserIds.add(user.id);
+      }
+    });
+    
+    // Reply mentions
+    if (message.reference?.messageId && message.channel.isTextBased()) {
+      try {
+        const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+        if (!repliedMessage.author.bot && repliedMessage.author.id !== message.author.id) {
+          mentionedUserIds.add(repliedMessage.author.id);
+        }
+      } catch {
+        // Message might be deleted, ignore
+      }
+    }
+    
+    if (mentionedUserIds.size > 0) {
+      const afkStatuses = await getAfkByIds(Array.from(mentionedUserIds));
+      
+      for (const [userId, afkData] of Object.entries(afkStatuses)) {
+        if (afkData) {
+          const user = await client.users.fetch(userId).catch(() => null);
+          const username = user?.displayName || user?.username || 'That user';
+          
+          const embed = new EmbedBuilder()
+            .setColor(AFK_PURPLE)
+            .setTitle('💤 User is AFK')
+            .setDescription(`**${username}** is AFK: ${afkData.message}`)
+            .setFooter({ text: `AFK since ${new Date(afkData.timestamp).toLocaleString()}` });
+          
+          await message.reply({ embeds: [embed] });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error checking mentioned users AFK status:', err);
+  }
+  // === End AFK System ===
 
   // Handle bot mentions/replies for editing assistant
   if (client.user && await isBotMentionOrReply(message, client.user.id)) {
@@ -117,6 +185,44 @@ client.on(Events.MessageCreate, async message => {
       .join('');
 
     await message.channel.send(mocked);
+  }
+});
+
+// Handle AFK removal on reaction
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
+  // Ignore bots
+  if (user.bot) return;
+
+  try {
+    const result = await removeAfk(user.id);
+    if (result.removed) {
+      const duration = formatDuration(result.duration);
+      
+      // Fetch the full message if partial
+      if (reaction.partial) {
+        try {
+          await reaction.fetch();
+        } catch {
+          return; // Message might be deleted
+        }
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(AFK_PURPLE)
+        .setTitle('👋 Welcome Back!')
+        .setDescription(`You were AFK for **${duration}**`)
+        .setTimestamp();
+
+      // Send in the channel where the reaction was added
+      if (reaction.message.channel.isTextBased() && 'send' in reaction.message.channel) {
+        await reaction.message.channel.send({ 
+          content: `<@${user.id}>`,
+          embeds: [embed] 
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error removing AFK on reaction:', err);
   }
 });
 
