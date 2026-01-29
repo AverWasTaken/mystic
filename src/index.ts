@@ -314,7 +314,7 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Set bot status
   readyClient.user.setPresence({
-    activities: [{ name: 'Over Mystic', type: ActivityType.Watching }],
+    activities: [{ name: 'over mystic.', type: ActivityType.Watching }],
     status: 'online',
   });
 
