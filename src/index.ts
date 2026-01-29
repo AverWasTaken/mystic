@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
 import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
 import { setupReactionRoles } from './utils/reactionRoles';
+import { setupWelcome } from './utils/welcome';
 
 dotenv.config();
 
@@ -157,6 +158,9 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Setup reaction roles
   setupReactionRoles(client);
+
+  // Setup welcome system
+  setupWelcome(client);
 
   // Build slash command data from loaded commands
   const slashCommands = [];
