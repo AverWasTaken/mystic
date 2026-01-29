@@ -4,6 +4,7 @@ import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityTy
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
 import { handleEditingAssistant, isBotMentionOrReply } from './utils/editingAssistant';
+import { setupReactionRoles } from './utils/reactionRoles';
 
 dotenv.config();
 
@@ -13,7 +14,9 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers
   ]
 }) as MysticClient;
 
@@ -146,6 +149,9 @@ client.once(Events.ClientReady, async readyClient => {
     activities: [{ name: 'Over Mystic', type: ActivityType.Watching }],
     status: 'online',
   });
+
+  // Setup reaction roles
+  setupReactionRoles(client);
 
   // Build slash command data from loaded commands
   const slashCommands = [];
