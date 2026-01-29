@@ -11,10 +11,11 @@ import { getAfk, getAfkByIds, removeAfk, formatDuration } from './utils/afk';
 import { setSnipe } from './utils/snipe';
 import { logMessageEdit, logMessageDelete, logMemberJoin, logMemberLeave } from './utils/logs';
 import { handleStarboardReaction } from './utils/starboard';
+import { initPrefixSystem, getMatchedPrefix, DEFAULT_PREFIX } from './utils/prefixes';
 
 dotenv.config();
 
-const PREFIX = 'm!';
+const PREFIX = DEFAULT_PREFIX;
 
 const client = new Client({
   intents: [
