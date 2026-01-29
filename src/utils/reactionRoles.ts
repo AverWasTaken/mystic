@@ -16,12 +16,12 @@ const reactionRoles: Record<string, Record<string, string>> = {
     '🎬': '1466107497562505327', // Film audio ping
   },
   // Notification Pings
-  '1466445981410136329': {
+  '1466446264429449479': {
     'tiktok': '1466444788441284847', // TikTok Posts
     '💀': '1466444830145249290', // Dead Chat Ping
   },
   // Gender Roles
-  '1466445995696197755': {
+  '1466446268778680352': {
     '🔵': '1466444863439376657', // Male
     '🟣': '1466444921002131681', // Female
   },
