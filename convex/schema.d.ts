@@ -50,6 +50,21 @@ declare const _default: import("convex/server").SchemaDefinition<{
     }, "required", "timestamp" | "oduserId" | "odmoderatorId" | "reason">, {
         by_oduserId: ["oduserId", "_creationTime"];
     }, {}, {}>;
+    featureRequests: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        status?: string | undefined;
+        username: string;
+        userId: string;
+        timestamp: number;
+        request: string;
+    }, {
+        userId: import("convex/values").VString<string, "required">;
+        username: import("convex/values").VString<string, "required">;
+        request: import("convex/values").VString<string, "required">;
+        timestamp: import("convex/values").VFloat64<number, "required">;
+        status: import("convex/values").VString<string | undefined, "optional">;
+    }, "required", "username" | "status" | "userId" | "timestamp" | "request">, {
+        by_timestamp: ["timestamp", "_creationTime"];
+    }, {}, {}>;
 }, true>;
 export default _default;
 //# sourceMappingURL=schema.d.ts.map

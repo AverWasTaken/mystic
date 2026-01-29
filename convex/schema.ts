@@ -29,4 +29,12 @@ export default defineSchema({
     reason: v.string(),
     timestamp: v.number(),
   }).index("by_oduserId", ["oduserId"]),
+
+  featureRequests: defineTable({
+    userId: v.string(),
+    username: v.string(),
+    request: v.string(),
+    timestamp: v.number(),
+    status: v.optional(v.string()),
+  }).index("by_timestamp", ["timestamp"]),
 });

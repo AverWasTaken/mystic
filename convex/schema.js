@@ -26,5 +26,12 @@ exports.default = (0, server_1.defineSchema)({
         reason: values_1.v.string(),
         timestamp: values_1.v.number(),
     }).index("by_oduserId", ["oduserId"]),
+    featureRequests: (0, server_1.defineTable)({
+        userId: values_1.v.string(),
+        username: values_1.v.string(),
+        request: values_1.v.string(),
+        timestamp: values_1.v.number(),
+        status: values_1.v.optional(values_1.v.string()),
+    }).index("by_timestamp", ["timestamp"]),
 });
 //# sourceMappingURL=schema.js.map

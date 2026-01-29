@@ -10,6 +10,7 @@
 
 import type * as afk from "../afk.js";
 import type * as economy from "../economy.js";
+import type * as featureRequests from "../featureRequests.js";
 import type * as prefixes from "../prefixes.js";
 import type * as warnings from "../warnings.js";
 
@@ -22,6 +23,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   afk: typeof afk;
   economy: typeof economy;
+  featureRequests: typeof featureRequests;
   prefixes: typeof prefixes;
   warnings: typeof warnings;
 }>;
