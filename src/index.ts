@@ -149,26 +149,16 @@ client.once(Events.ClientReady, async readyClient => {
     }
   }
 
-  // Register slash commands
+  // Register slash commands globally
   const rest = new REST().setToken(process.env.TOKEN!);
-  const MYSTIC_GUILD_ID = '1465814898658513201';
   
   try {
-    // Register globally
     console.log(`Registering ${slashCommands.length} slash commands globally...`);
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID!),
       { body: slashCommands }
     );
     console.log(`Successfully registered ${slashCommands.length} global slash commands!`);
-    
-    // Register to Mystic guild for instant updates
-    console.log(`Registering ${slashCommands.length} slash commands to Mystic guild...`);
-    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID!, MYSTIC_GUILD_ID),
-      { body: slashCommands }
-    );
-    console.log(`Successfully registered ${slashCommands.length} guild slash commands!`);
   } catch (error) {
     console.error('Failed to register slash commands:', error);
   }
