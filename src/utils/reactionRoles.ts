@@ -3,14 +3,14 @@ import { Client, Events, GatewayIntentBits } from 'discord.js';
 // Reaction role mappings: messageId -> { emoji: roleId }
 const reactionRoles: Record<string, Record<string, string>> = {
   // Editing Software
-  '1466437385926742058': {
-    '🔷': '1466099626846322823', // After Effects
-    '📱': '1466099663206875248', // Alight Motion
-    '✂️': '1466099691442798766', // Capcut
+  '1466437725899981039': {
+    'aftereffects': '1466099626846322823', // After Effects
+    'alightmotion': '1466099663206875248', // Alight Motion
+    'capcut': '1466099691442798766', // Capcut
     '⭐': '1466099711898292316', // Videostar
   },
   // Audio Pings
-  '1466437394772529460': {
+  '1466437735941148733': {
     '🎨': '1466107415970709768', // Aesthetic audio ping
     '💥': '1466107468189798431', // Shake audio ping
     '🎞️': '1466107497562505327', // Film audio ping
