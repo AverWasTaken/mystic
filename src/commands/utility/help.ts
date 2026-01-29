@@ -35,6 +35,11 @@ interface Conversation {
 // Store active conversations (user ID -> conversation)
 const conversations = new Map<string, Conversation>();
 
+// Export function to check if user has active conversation
+export function hasActiveConversation(userId: string): boolean {
+  return conversations.has(userId);
+}
+
 // Max messages to keep in context (user specified 20)
 const MAX_MESSAGES = 20;
 
@@ -241,6 +246,7 @@ const command: Command = {
 
     // Fetch reply context if this is a reply to another message
     const replyContext = await fetchReplyContext(message);
+    console.log('[Help] Debug:', { messageText, hasAttachment: !!attachment, replyContext, hasReference: !!message.reference });
 
     // Check if there's any input (reply context also counts as input)
     if (!messageText && !attachment && !replyContext) {
@@ -545,4 +551,4 @@ const command: Command = {
   },
 };
 
-export = command;
+export default command;

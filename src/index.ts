@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials, EmbedBuilder } from 'discord.js';
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
-// editingAssistant removed - bot mentions now use the help command
+import { hasActiveConversation } from './commands/utility/help';
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
@@ -160,18 +160,28 @@ client.on(Events.MessageCreate, async message => {
     return;
   }
 
-  // Handle bot mentions - use the help command
+  // Handle bot mentions and replies to bot messages
   if (client.user) {
     const botId = client.user.id;
     const hasMention = message.content.includes(`<@${botId}>`) || message.content.includes(`<@!${botId}>`);
     
+    // Check if this is a reply to a bot message
+    let isReplyToBot = false;
+    if (message.reference?.messageId) {
+      try {
+        const repliedTo = await message.channel.messages.fetch(message.reference.messageId);
+        isReplyToBot = repliedTo.author.id === botId;
+      } catch {
+        // Failed to fetch referenced message
+      }
+    }
+    
+    // Handle @mentions (always start/continue convo)
     if (hasMention) {
-      // Strip the mention and use the rest as the message
       const strippedContent = message.content
         .replace(new RegExp(`<@!?${botId}>`, 'g'), '')
         .trim();
       
-      // Get the help command and execute it
       const helpCommand = client.commands.get('help');
       if (helpCommand) {
         const args = strippedContent ? strippedContent.split(/\s+/) : [];
@@ -179,6 +189,21 @@ client.on(Events.MessageCreate, async message => {
           await helpCommand.execute(message, args);
         } catch (error) {
           console.error('[Help via mention] Error:', error);
+          await message.reply('Something went wrong, try again.');
+        }
+      }
+      return;
+    }
+    
+    // Handle replies to bot messages (only if user has active conversation)
+    if (isReplyToBot && hasActiveConversation(message.author.id)) {
+      const helpCommand = client.commands.get('help');
+      if (helpCommand) {
+        const args = message.content.trim().split(/\s+/);
+        try {
+          await helpCommand.execute(message, args);
+        } catch (error) {
+          console.error('[Help via reply] Error:', error);
           await message.reply('Something went wrong, try again.');
         }
       }
