@@ -218,7 +218,7 @@ client.on(Events.MessageCreate, async message => {
   }
 });
 
-// Handle AFK removal on reaction
+// Handle starboard reactions
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
   // Ignore bots
   if (user.bot) return;
@@ -228,39 +228,6 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     await handleStarboardReaction(reaction);
   } catch (err) {
     console.error('Error handling starboard reaction:', err);
-  }
-
-  // Handle AFK removal
-  try {
-    const result = await removeAfk(user.id);
-    if (result.removed) {
-      const duration = formatDuration(result.duration);
-      
-      // Fetch the full message if partial
-      if (reaction.partial) {
-        try {
-          await reaction.fetch();
-        } catch {
-          return; // Message might be deleted
-        }
-      }
-
-      const embed = new EmbedBuilder()
-        .setColor(AFK_PURPLE)
-        .setTitle('👋 Welcome Back!')
-        .setDescription(`You were AFK for **${duration}**`)
-        .setTimestamp();
-
-      // Send in the channel where the reaction was added
-      if (reaction.message.channel.isTextBased() && 'send' in reaction.message.channel) {
-        await reaction.message.channel.send({ 
-          content: `<@${user.id}>`,
-          embeds: [embed] 
-        });
-      }
-    }
-  } catch (err) {
-    console.error('Error removing AFK on reaction:', err);
   }
 });
 
