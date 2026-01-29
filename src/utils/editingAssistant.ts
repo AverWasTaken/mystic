@@ -108,7 +108,28 @@ export async function handleEditingAssistant(message: Message): Promise<void> {
   
   // Extract the actual question (remove the bot mention)
   const botMentionRegex = /<@!?\d+>/g;
-  const userMessage = message.content.replace(botMentionRegex, '').trim();
+  let userMessage = message.content.replace(botMentionRegex, '').trim();
+  
+  // Check if replying to another user's message to help them
+  let helpingOtherUser = false;
+  let otherUserMention = '';
+  if (message.reference?.messageId) {
+    try {
+      const repliedTo = await message.channel.messages.fetch(message.reference.messageId);
+      // If replying to someone else's message (not the bot), use their message as context
+      if (repliedTo.author.id !== message.client.user?.id && !repliedTo.author.bot) {
+        const helpKeywords = ['help', 'assist', 'answer', 'respond'];
+        const isHelpRequest = helpKeywords.some(k => userMessage.toLowerCase().includes(k)) || !userMessage;
+        if (isHelpRequest) {
+          userMessage = repliedTo.content;
+          helpingOtherUser = true;
+          otherUserMention = `<@${repliedTo.author.id}>`;
+        }
+      }
+    } catch {
+      // Failed to fetch
+    }
+  }
   
   // If they just pinged without a message
   if (!userMessage) {
@@ -177,7 +198,9 @@ export async function handleEditingAssistant(message: Message): Promise<void> {
       .setDescription(assistantResponse.slice(0, 4096)) // Embed description limit
       .setColor(0x9B59B6);
 
+    const replyContent = helpingOtherUser ? otherUserMention : undefined;
     const reply = await message.reply({
+      content: replyContent,
       embeds: [embed],
       components: [createEndButton()]
     });
