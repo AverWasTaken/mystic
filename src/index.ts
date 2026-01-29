@@ -3,7 +3,8 @@ import path from 'node:path';
 import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials, EmbedBuilder } from 'discord.js';
 import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
-import { hasActiveConversation } from './commands/utility/help';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { hasActiveConversation } = require('./commands/utility/help');
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';

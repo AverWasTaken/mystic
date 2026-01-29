@@ -551,4 +551,5 @@ const command: Command = {
   },
 };
 
-export default command;
+module.exports = command;
+module.exports.hasActiveConversation = hasActiveConversation;
