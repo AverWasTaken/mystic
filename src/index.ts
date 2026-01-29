@@ -140,13 +140,7 @@ client.on(Events.MessageCreate, async message => {
   }
   // === End AFK System ===
 
-  // Handle bot mentions/replies for editing assistant
-  if (client.user && await isBotMentionOrReply(message, client.user.id)) {
-    await handleEditingAssistant(message);
-    return;
-  }
-
-  // Check for prefix (default or user's custom prefix)
+  // Check for prefix (default or user's custom prefix) FIRST before editing assistant
   const matchedPrefix = getMatchedPrefix(message.content, message.author.id);
   if (matchedPrefix) {
     const args = message.content.slice(matchedPrefix.length).trim().split(/\s+/);
@@ -163,6 +157,12 @@ client.on(Events.MessageCreate, async message => {
       console.error(error);
       await message.reply('There was an error executing this command.');
     }
+    return;
+  }
+
+  // Handle bot mentions/replies for editing assistant (after checking for commands)
+  if (client.user && await isBotMentionOrReply(message, client.user.id)) {
+    await handleEditingAssistant(message);
     return;
   }
 
