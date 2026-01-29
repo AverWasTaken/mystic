@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { hasActiveConversation } = require('./commands/utility/help');
+import { handleChillAssistant, isBotMentionOrReply } from './utils/chillAssistant';
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
@@ -181,6 +182,12 @@ client.on(Events.MessageCreate, async message => {
     } catch {
       // Failed to fetch referenced message
     }
+  }
+
+  // Handle @mentions - use chill assistant
+  if (client.user && await isBotMentionOrReply(message, client.user.id)) {
+    await handleChillAssistant(message);
+    return;
   }
 
   // Only process non-command messages below
