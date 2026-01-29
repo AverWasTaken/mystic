@@ -68,3 +68,15 @@ export const removeAfk = mutation({
     return { removed: false, duration: 0 };
   },
 });
+
+export const getAllAfk = query({
+  args: {},
+  handler: async (ctx) => {
+    const records = await ctx.db.query("afk").collect();
+    return records.map((r) => ({
+      userId: r.userId,
+      message: r.message,
+      timestamp: r.timestamp,
+    }));
+  },
+});

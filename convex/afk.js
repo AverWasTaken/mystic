@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeAfk = exports.setAfk = exports.getAfkByIds = exports.getAfk = void 0;
+exports.getAllAfk = exports.removeAfk = exports.setAfk = exports.getAfkByIds = exports.getAfk = void 0;
 const server_1 = require("./_generated/server");
 const values_1 = require("convex/values");
 exports.getAfk = (0, server_1.query)({
@@ -57,6 +57,17 @@ exports.removeAfk = (0, server_1.mutation)({
             return { removed: true, duration };
         }
         return { removed: false, duration: 0 };
+    },
+});
+exports.getAllAfk = (0, server_1.query)({
+    args: {},
+    handler: async (ctx) => {
+        const records = await ctx.db.query("afk").collect();
+        return records.map((r) => ({
+            userId: r.userId,
+            message: r.message,
+            timestamp: r.timestamp,
+        }));
     },
 });
 //# sourceMappingURL=afk.js.map

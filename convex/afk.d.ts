@@ -27,4 +27,9 @@ export declare const removeAfk: import("convex/server").RegisteredMutation<"publ
     removed: boolean;
     duration: number;
 }>>;
+export declare const getAllAfk: import("convex/server").RegisteredQuery<"public", {}, Promise<{
+    userId: string;
+    message: string;
+    timestamp: number;
+}[]>>;
 //# sourceMappingURL=afk.d.ts.map

@@ -37,6 +37,10 @@ export async function removeAfk(userId: string): Promise<{ removed: boolean; dur
   return await getClient().mutation(api.afk.removeAfk, { userId });
 }
 
+export async function getAllAfk(): Promise<AfkData[]> {
+  return await getClient().query(api.afk.getAllAfk, {});
+}
+
 export function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
