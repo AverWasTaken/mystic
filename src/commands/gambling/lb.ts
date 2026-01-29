@@ -5,11 +5,11 @@ import { getLeaderboard } from '../../utils/economy';
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 const command: Command = {
-  name: 'leaderboard',
-  description: 'View the top 10 richest users',
+  name: 'lb',
+  description: 'View the top 10 richest users (alias for leaderboard)',
 
   slashData: new SlashCommandBuilder()
-    .setName('leaderboard')
+    .setName('lb')
     .setDescription('View the top 10 richest users'),
 
   async execute(message: Message, args: string[]): Promise<void> {

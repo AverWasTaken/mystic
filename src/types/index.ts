@@ -10,6 +10,7 @@ import {
 export interface Command {
   name: string;
   description: string;
+  aliases?: string[];
   // Prefix command handler
   execute: (message: Message, args: string[]) => Promise<void>;
   // Slash command handler (optional - if not provided, command won't have slash support)

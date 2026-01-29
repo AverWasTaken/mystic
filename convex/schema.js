@@ -16,5 +16,15 @@ exports.default = (0, server_1.defineSchema)({
         userId: values_1.v.string(),
         lastClaim: values_1.v.number(),
     }).index("by_userId", ["userId"]),
+    warnings: (0, server_1.defineTable)({
+        oduserId: values_1.v.string(),
+        odmoderatorId: values_1.v.string(),
+        reason: values_1.v.string(),
+        timestamp: values_1.v.number(),
+    }).index("by_oduserId", ["oduserId"]),
+    userPrefixes: (0, server_1.defineTable)({
+        userId: values_1.v.string(),
+        prefix: values_1.v.string(),
+    }).index("by_userId", ["userId"]),
 });
 //# sourceMappingURL=schema.js.map

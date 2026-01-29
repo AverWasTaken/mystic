@@ -27,7 +27,8 @@ const client = new Client({
   partials: [
     Partials.Message,
     Partials.Channel,
-    Partials.Reaction
+    Partials.Reaction,
+    Partials.GuildMember
   ]
 }) as MysticClient;
 
@@ -237,10 +238,18 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   }
 });
 
-// Handle message deletions for snipe
+// Handle message deletions for snipe and logging
 client.on(Events.MessageDelete, async message => {
-  // Ignore partial messages without content, bot messages, and DMs
-  if (!message.content || message.author?.bot || !message.guild) return;
+  // Skip DMs
+  if (!message.guild) return;
+
+  // Log all deletions (including bots) to the log channel
+  if (!message.author?.bot) {
+    await logMessageDelete(client, message);
+  }
+
+  // Only snipe non-bot messages with content
+  if (!message.content || message.author?.bot) return;
 
   setSnipe(message.channel.id, {
     content: message.content,
@@ -248,6 +257,26 @@ client.on(Events.MessageDelete, async message => {
     authorAvatar: message.author?.displayAvatarURL() || null,
     deletedAt: Date.now()
   });
+});
+
+// Handle message edits for logging
+client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+  // Skip DMs and bots
+  if (!newMessage.guild || newMessage.author?.bot) return;
+
+  await logMessageEdit(client, oldMessage, newMessage);
+});
+
+// Handle member joins
+client.on(Events.GuildMemberAdd, async member => {
+  await logMemberJoin(client, member);
+});
+
+// Handle member leaves
+client.on(Events.GuildMemberRemove, async member => {
+  // GuildMemberRemove can receive a partial member, but we need GuildMember
+  // The partials allow us to still get the user info even if they weren't cached
+  await logMemberLeave(client, member as import('discord.js').GuildMember);
 });
 
 // Handle slash commands
