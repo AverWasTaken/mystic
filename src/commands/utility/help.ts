@@ -147,6 +147,58 @@ async function fetchImageAsBase64(url: string): Promise<string> {
   return `data:${mimeType};base64,${base64}`;
 }
 
+// ===================== Reply Context =====================
+
+interface ReplyContext {
+  text: string | null;
+  imageUrls: string[];
+  authorName: string;
+}
+
+async function fetchReplyContext(message: Message): Promise<ReplyContext | null> {
+  // Check if message is a reply to another message
+  if (!message.reference?.messageId) {
+    return null;
+  }
+
+  try {
+    const referencedMessage = await message.channel.messages.fetch(
+      message.reference.messageId
+    );
+
+    const imageUrls: string[] = [];
+
+    // Collect image attachments
+    for (const attachment of referencedMessage.attachments.values()) {
+      if (attachment.contentType?.startsWith('image/')) {
+        imageUrls.push(attachment.url);
+      }
+    }
+
+    // Also check for image embeds (e.g., from image URLs in the message)
+    for (const embed of referencedMessage.embeds) {
+      if (embed.image?.url) {
+        imageUrls.push(embed.image.url);
+      }
+      if (embed.thumbnail?.url) {
+        imageUrls.push(embed.thumbnail.url);
+      }
+    }
+
+    return {
+      text: referencedMessage.content || null,
+      imageUrls,
+      authorName:
+        referencedMessage.member?.displayName ||
+        referencedMessage.author.displayName ||
+        referencedMessage.author.username,
+    };
+  } catch (error) {
+    console.error('[Help] Failed to fetch referenced message:', error);
+    return null;
+  }
+}
+
 // ===================== Command =====================
 
 const command: Command = {
@@ -187,8 +239,11 @@ const command: Command = {
       return;
     }
 
-    // Check if there's any input
-    if (!messageText && !attachment) {
+    // Fetch reply context if this is a reply to another message
+    const replyContext = await fetchReplyContext(message);
+
+    // Check if there's any input (reply context also counts as input)
+    if (!messageText && !attachment && !replyContext) {
       const conversation = conversations.get(userId);
       const msgCount = conversation?.messages.length || 0;
 
@@ -201,6 +256,7 @@ const command: Command = {
             '• `m!help your question` - Ask a question\n' +
             '• `m!help` + attach an image - Share an image for analysis\n' +
             '• `m!help your question` + attach image - Both together\n' +
+            '• Reply to a message with `m!help` - Ask about that message\n' +
             '• `m!help clear` - Clear your conversation history\n\n' +
             `📝 Your conversation: **${msgCount}/${MAX_MESSAGES}** messages\n` +
             '⏰ Conversations auto-clear after 20 minutes of inactivity.'
@@ -225,26 +281,74 @@ const command: Command = {
       // Build message content
       let userContent: MessageContent;
 
-      if (attachment && attachment.contentType?.startsWith('image/')) {
-        // Has image - need multimodal content
+      // Check if we need multimodal content (images from attachment or reply)
+      const hasAttachmentImage = attachment?.contentType?.startsWith('image/');
+      const hasReplyImages = replyContext && replyContext.imageUrls.length > 0;
+      const needsMultimodal = hasAttachmentImage || hasReplyImages;
+
+      if (needsMultimodal) {
+        // Has images - need multimodal content
         const parts: (ContentPart | ImagePart)[] = [];
 
+        // Add reply context first if present
+        if (replyContext) {
+          let replyText = `User is replying to this message from ${replyContext.authorName}:`;
+          if (replyContext.text) {
+            replyText += `\n"${replyContext.text}"`;
+          }
+          if (replyContext.imageUrls.length > 0) {
+            replyText += `\n[The replied message contains ${replyContext.imageUrls.length} image(s) shown below]`;
+          }
+          parts.push({ type: 'text', text: replyText });
+
+          // Add images from the replied message
+          for (const imageUrl of replyContext.imageUrls) {
+            try {
+              const dataUrl = await fetchImageAsBase64(imageUrl);
+              parts.push({
+                type: 'image_url',
+                image_url: { url: dataUrl },
+              });
+            } catch (error) {
+              console.error('[Help] Failed to fetch reply image:', error);
+            }
+          }
+        }
+
+        // Add user's question/text
         if (messageText) {
-          parts.push({ type: 'text', text: messageText });
+          const prefix = replyContext ? "\nUser's question: " : '';
+          parts.push({ type: 'text', text: prefix + messageText });
+        } else if (replyContext) {
+          parts.push({
+            type: 'text',
+            text: "\nUser's question: What can you tell me about this message?",
+          });
         } else {
           parts.push({ type: 'text', text: 'What is in this image?' });
         }
 
-        // Fetch and convert image to base64
-        const dataUrl = await fetchImageAsBase64(attachment.url);
-        parts.push({
-          type: 'image_url',
-          image_url: { url: dataUrl },
-        });
+        // Add user's attached image
+        if (hasAttachmentImage && attachment) {
+          const dataUrl = await fetchImageAsBase64(attachment.url);
+          parts.push({
+            type: 'image_url',
+            image_url: { url: dataUrl },
+          });
+        }
 
         userContent = parts;
+      } else if (replyContext) {
+        // Reply context with text only (no images)
+        let contextText = `User is replying to this message from ${replyContext.authorName}:\n"${replyContext.text || '[No text content]'}"`;
+        if (messageText) {
+          contextText += `\n\nUser's question: ${messageText}`;
+        } else {
+          contextText += `\n\nUser's question: What can you tell me about this message?`;
+        }
+        userContent = contextText;
       } else {
-        // Text only
+        // Text only, no reply context
         userContent = messageText || 'Hello';
       }
 
@@ -337,6 +441,7 @@ const command: Command = {
             '• `/help image:attachment` - Share an image for analysis\n' +
             '• `/help message:text image:attachment` - Both together\n' +
             '• `/help clear:true` - Clear your conversation history\n\n' +
+            '💡 **Tip:** To ask about another message, reply to it with `m!help`\n\n' +
             `📝 Your conversation: **${msgCount}/${MAX_MESSAGES}** messages\n` +
             '⏰ Conversations auto-clear after 20 minutes of inactivity.'
         )
