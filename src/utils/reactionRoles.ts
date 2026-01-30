@@ -25,6 +25,10 @@ const reactionRoles: Record<string, Record<string, string>> = {
     '🔵': '1466444863439376657', // Male
     '🟣': '1466444921002131681', // Female
   },
+  // Helper Role
+  '1466773517998624779': {
+    '⭐': '1465848010419343622', // Helper
+  },
 };
 
 export function setupReactionRoles(client: Client): void {
