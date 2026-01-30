@@ -9,7 +9,7 @@ import {
 } from 'discord.js';
 import type { Command } from '../../types';
 
-const PURPLE = 0x9B59B6;
+const ORANGE = 0xE67E22;
 
 // Map verification levels to readable strings
 const verificationLevelNames: Record<GuildVerificationLevel, string> = {
@@ -37,7 +37,7 @@ async function buildServerInfoEmbed(guild: Guild): Promise<EmbedBuilder> {
   
   // Build embed
   const embed = new EmbedBuilder()
-    .setColor(PURPLE)
+    .setColor(ORANGE)
     .setTitle(guild.name)
     .setThumbnail(guild.iconURL({ size: 256 }) || null)
     .setTimestamp();
