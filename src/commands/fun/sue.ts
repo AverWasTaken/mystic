@@ -6,40 +6,97 @@ import {
 } from 'discord.js';
 import type { Command } from '../../types';
 
-const COURT_SYSTEM_PROMPT = `You are Judge Mystic, an AI judge presiding over the most dramatic courtroom in Discord history. You are theatrical, entertaining, and a bit unhinged. Your courtroom is CHAOS but you maintain order with an iron gavel.
+// ===================== Conversation State =====================
 
-Your job: Review the charges, dramatically question the absurdity of the situation, and deliver a verdict.
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS (use these exact headers):
+interface CourtCase {
+  plaintiffId: string;
+  plaintiffName: string;
+  defendantId: string;
+  defendantName: string;
+  reason: string;
+  messages: ConversationMessage[];
+  lastActivity: number;
+  timeout: NodeJS.Timeout;
+  lastBotMessageId: string | null;
+}
 
-**⚖️ COURT IS NOW IN SESSION ⚖️**
+// Store active court cases (channel ID -> case)
+const activeCases = new Map<string, CourtCase>();
 
-*The Honorable Judge Mystic presiding*
+// Case timeout (5 minutes of inactivity)
+const CASE_TIMEOUT_MS = 5 * 60 * 1000;
 
-**📋 CHARGES:** [Summarize the charges dramatically]
+// Function to check if channel has an active case
+function getActiveCase(channelId: string): CourtCase | undefined {
+  return activeCases.get(channelId);
+}
 
-**🔍 REVIEWING THE EVIDENCE...**
-[2-3 sentences of dramatic courtroom commentary. Ask rhetorical questions. Be theatrical. Maybe gasp at the audacity.]
+// Function to handle replies in the court case
+async function handleCourtReply(message: Message): Promise<boolean> {
+  const courtCase = activeCases.get(message.channel.id);
+  if (!courtCase) return false;
 
-**🎭 VERDICT:**
-[GUILTY or NOT GUILTY - make it dramatic]
+  // Check if this is from plaintiff or defendant
+  const isPlaintiff = message.author.id === courtCase.plaintiffId;
+  const isDefendant = message.author.id === courtCase.defendantId;
 
-**📜 SENTENCE:**
-[If guilty: Give a silly sentence like "24 hours in the shadow realm", "must use only lowercase for 1 hour", "sentenced to touch grass immediately", "must change nickname to 'certified clown' for the day", etc. Be creative and funny!
-If not guilty: Dismiss the case with some dramatic flair, maybe roast the plaintiff for wasting the court's time]
+  if (!isPlaintiff && !isDefendant) return false;
 
-Keep it SHORT and punchy - this is entertainment, not an essay. Maximum 4-5 sentences per section. Be funny!`;
+  // Check if they're replying to the judge's message
+  if (!message.reference?.messageId) return false;
+  if (message.reference.messageId !== courtCase.lastBotMessageId) return false;
 
-async function callOpenRouter(plaintiff: string, defendant: string, reason: string): Promise<string> {
+  // Process this as a court response
+  await processCourtResponse(message, courtCase, isPlaintiff);
+  return true;
+}
+
+const COURT_SYSTEM_PROMPT = `You are Judge Mystic, the most dramatic and entertaining AI judge in all of Discord. You preside over the Mystic Court of Discord with theatrical flair, sharp wit, and just the right amount of chaos.
+
+YOUR ROLE:
+- You are running an INTERACTIVE court session, not a one-shot verdict
+- Question both the plaintiff and defendant
+- Build drama and entertainment through the proceedings
+- Deliver your verdict when you feel you have enough information (or when the drama peaks)
+
+THE PARTIES:
+- PLAINTIFF: {{PLAINTIFF_NAME}} - The one bringing charges
+- DEFENDANT: {{DEFENDANT_NAME}} - The accused
+
+ORIGINAL CHARGES: {{REASON}}
+
+HOW TO CONDUCT THE CASE:
+1. Start with a dramatic court opening
+2. Question the plaintiff about the incident
+3. Let the defendant respond and defend themselves
+4. You can ask follow-up questions, make dramatic observations, request evidence
+5. When ready, deliver your final verdict
+
+FORMATTING:
+- Use **bold** for emphasis and drama
+- Use *italics* for theatrical narration
+- Be entertaining but keep responses under 1500 characters
+- When questioning someone, make it clear who you're addressing
+
+WHEN YOU'RE READY TO CLOSE THE CASE:
+Include "**⚖️ CASE CLOSED ⚖️**" in your response with:
+- Your verdict (GUILTY or NOT GUILTY)
+- A dramatic sentence if guilty (silly things like "sentenced to touch grass", "must use only lowercase for 1 hour", "banished to the shadow realm for 24 hours")
+- If not guilty, roast the plaintiff for wasting the court's time
+
+Keep things fun, dramatic, and engaging! You're here to entertain.`;
+
+async function callOpenRouter(systemPrompt: string, messages: ConversationMessage[]): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY not found in environment variables');
   }
-
-  const userMessage = `${plaintiff} is suing ${defendant} for the following reason: "${reason}"
-
-Deliver your verdict, Judge Mystic!`;
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -52,8 +109,8 @@ Deliver your verdict, Judge Mystic!`;
     body: JSON.stringify({
       model: 'anthropic/claude-sonnet-4.5',
       messages: [
-        { role: 'system', content: COURT_SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
+        { role: 'system', content: systemPrompt },
+        ...messages,
       ],
       max_tokens: 1024,
       temperature: 0.9,
@@ -82,13 +139,120 @@ Deliver your verdict, Judge Mystic!`;
   return 'The court is experiencing technical difficulties. Case dismissed!';
 }
 
+function buildSystemPrompt(courtCase: CourtCase): string {
+  return COURT_SYSTEM_PROMPT
+    .replace('{{PLAINTIFF_NAME}}', courtCase.plaintiffName)
+    .replace('{{DEFENDANT_NAME}}', courtCase.defendantName)
+    .replace('{{REASON}}', courtCase.reason);
+}
+
+function clearCase(channelId: string): void {
+  const courtCase = activeCases.get(channelId);
+  if (courtCase) {
+    clearTimeout(courtCase.timeout);
+    activeCases.delete(channelId);
+  }
+}
+
+function resetTimeout(channelId: string, message: Message): void {
+  const courtCase = activeCases.get(channelId);
+  if (courtCase) {
+    clearTimeout(courtCase.timeout);
+    courtCase.timeout = setTimeout(async () => {
+      activeCases.delete(channelId);
+      console.log(`[Sue] Court case expired in channel ${channelId}`);
+      
+      try {
+        const embed = new EmbedBuilder()
+          .setColor(0x8B4513)
+          .setTitle('🏛️ COURT ADJOURNED 🏛️')
+          .setDescription('*The judge has left the courtroom due to inactivity.*\n\n**Case dismissed due to abandonment.** Both parties may file again if they wish to continue.')
+          .setFooter({ text: '⚖️ Session expired after 5 minutes of inactivity' })
+          .setTimestamp();
+        
+        if (message.channel.isTextBased() && 'send' in message.channel) {
+          await message.channel.send({ embeds: [embed] });
+        }
+      } catch (err) {
+        console.error('[Sue] Failed to send timeout message:', err);
+      }
+    }, CASE_TIMEOUT_MS);
+  }
+}
+
+async function processCourtResponse(message: Message, courtCase: CourtCase, isPlaintiff: boolean): Promise<void> {
+  // Update activity and reset timeout
+  courtCase.lastActivity = Date.now();
+  resetTimeout(message.channel.id, message);
+
+  // Show typing
+  if ('sendTyping' in message.channel) {
+    await message.channel.sendTyping();
+  }
+
+  try {
+    // Add the user's message to history with speaker identification
+    const speakerLabel = isPlaintiff ? `[PLAINTIFF ${courtCase.plaintiffName}]` : `[DEFENDANT ${courtCase.defendantName}]`;
+    courtCase.messages.push({
+      role: 'user',
+      content: `${speakerLabel}: ${message.content}`,
+    });
+
+    // Get AI response
+    const systemPrompt = buildSystemPrompt(courtCase);
+    const response = await callOpenRouter(systemPrompt, courtCase.messages);
+
+    // Add response to history
+    courtCase.messages.push({
+      role: 'assistant',
+      content: response,
+    });
+
+    // Check if case is closed
+    const isCaseClosed = response.includes('CASE CLOSED');
+
+    // Build embed
+    const embed = new EmbedBuilder()
+      .setColor(isCaseClosed ? 0x2F4F4F : 0x8B4513)
+      .setTitle(isCaseClosed ? '🏛️ MYSTIC COURT - FINAL VERDICT 🏛️' : '🏛️ MYSTIC COURT OF DISCORD 🏛️')
+      .setDescription(response.slice(0, 4096))
+      .addFields(
+        { name: '👨‍⚖️ Plaintiff', value: `<@${courtCase.plaintiffId}>`, inline: true },
+        { name: '👤 Defendant', value: `<@${courtCase.defendantId}>`, inline: true },
+      )
+      .setTimestamp();
+
+    if (isCaseClosed) {
+      embed.setFooter({ text: '⚖️ This court session has concluded' });
+      clearCase(message.channel.id);
+    } else {
+      embed.setFooter({ text: '⚖️ Reply to this message to respond to the judge • Case expires in 5 min' });
+    }
+
+    const sentMessage = await message.reply({ embeds: [embed] });
+    
+    if (!isCaseClosed) {
+      courtCase.lastBotMessageId = sentMessage.id;
+    }
+  } catch (error) {
+    console.error('[Sue] Error processing court response:', error);
+
+    const errorEmbed = new EmbedBuilder()
+      .setColor(0xe74c3c)
+      .setTitle('⚖️ Court Recess')
+      .setDescription('The court is experiencing technical difficulties. Please try again.');
+
+    await message.reply({ embeds: [errorEmbed] });
+  }
+}
+
 const command: Command = {
   name: 'sue',
-  description: 'Sue another user and let AI Judge Mystic decide the verdict!',
+  description: 'Sue another user and participate in an interactive court session!',
 
   slashData: new SlashCommandBuilder()
     .setName('sue')
-    .setDescription('Sue another user and let AI Judge Mystic decide the verdict!')
+    .setDescription('Sue another user and participate in an interactive court session!')
     .addUserOption((option) =>
       option
         .setName('defendant')
@@ -103,6 +267,12 @@ const command: Command = {
     ),
 
   async execute(message: Message, args: string[]): Promise<void> {
+    // Check if there's already an active case in this channel
+    if (activeCases.has(message.channel.id)) {
+      await message.reply('⚖️ There\'s already an active court case in this channel! Wait for it to conclude or let it timeout.');
+      return;
+    }
+
     const defendant = message.mentions.users.first();
 
     if (!defendant) {
@@ -137,22 +307,56 @@ const command: Command = {
       const plaintiffName = message.member?.displayName || message.author.displayName || message.author.username;
       const defendantName = message.guild?.members.cache.get(defendant.id)?.displayName || defendant.displayName || defendant.username;
 
-      const verdict = await callOpenRouter(plaintiffName, defendantName, reason);
+      // Create the court case
+      const courtCase: CourtCase = {
+        plaintiffId: message.author.id,
+        plaintiffName,
+        defendantId: defendant.id,
+        defendantName,
+        reason,
+        messages: [],
+        lastActivity: Date.now(),
+        timeout: setTimeout(() => {}, 0), // Will be set properly below
+        lastBotMessageId: null,
+      };
+
+      // Add initial case message
+      courtCase.messages.push({
+        role: 'user',
+        content: `A new case has been filed. ${plaintiffName} is suing ${defendantName} for: "${reason}". Please open the court session dramatically and begin questioning the parties.`,
+      });
+
+      // Store the case
+      activeCases.set(message.channel.id, courtCase);
+      resetTimeout(message.channel.id, message);
+
+      // Get initial response from the judge
+      const systemPrompt = buildSystemPrompt(courtCase);
+      const response = await callOpenRouter(systemPrompt, courtCase.messages);
+
+      // Add response to history
+      courtCase.messages.push({
+        role: 'assistant',
+        content: response,
+      });
 
       const embed = new EmbedBuilder()
-        .setColor(0x8B4513) // Brown/wood color for courthouse vibes
+        .setColor(0x8B4513)
         .setTitle('🏛️ MYSTIC COURT OF DISCORD 🏛️')
-        .setDescription(verdict)
+        .setDescription(response.slice(0, 4096))
         .addFields(
           { name: '👨‍⚖️ Plaintiff', value: `<@${message.author.id}>`, inline: true },
           { name: '👤 Defendant', value: `<@${defendant.id}>`, inline: true },
         )
-        .setFooter({ text: '⚖️ Justice has been served • This is for entertainment only' })
+        .setFooter({ text: '⚖️ Reply to this message to respond to the judge • Case expires in 5 min' })
         .setTimestamp();
 
-      await message.reply({ embeds: [embed] });
+      const sentMessage = await message.reply({ embeds: [embed] });
+      courtCase.lastBotMessageId = sentMessage.id;
+
     } catch (error) {
       console.error('[Sue] Error:', error);
+      clearCase(message.channel.id);
 
       const errorEmbed = new EmbedBuilder()
         .setColor(0xe74c3c)
@@ -164,6 +368,15 @@ const command: Command = {
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    // Check if there's already an active case in this channel
+    if (activeCases.has(interaction.channelId)) {
+      await interaction.reply({
+        content: '⚖️ There\'s already an active court case in this channel! Wait for it to conclude or let it timeout.',
+        ephemeral: true,
+      });
+      return;
+    }
+
     const defendant = interaction.options.getUser('defendant', true);
     const reason = interaction.options.getString('reason', true);
 
@@ -187,22 +400,77 @@ const command: Command = {
       const defendantMember = interaction.guild?.members.cache.get(defendant.id);
       const defendantName = defendantMember?.displayName || defendant.displayName || defendant.username;
 
-      const verdict = await callOpenRouter(plaintiffName, defendantName, reason);
+      // Create the court case
+      const courtCase: CourtCase = {
+        plaintiffId: interaction.user.id,
+        plaintiffName,
+        defendantId: defendant.id,
+        defendantName,
+        reason,
+        messages: [],
+        lastActivity: Date.now(),
+        timeout: setTimeout(() => {}, 0),
+        lastBotMessageId: null,
+      };
+
+      // Add initial case message
+      courtCase.messages.push({
+        role: 'user',
+        content: `A new case has been filed. ${plaintiffName} is suing ${defendantName} for: "${reason}". Please open the court session dramatically and begin questioning the parties.`,
+      });
+
+      // Store the case
+      activeCases.set(interaction.channelId, courtCase);
+
+      // Get initial response from the judge
+      const systemPrompt = buildSystemPrompt(courtCase);
+      const response = await callOpenRouter(systemPrompt, courtCase.messages);
+
+      // Add response to history
+      courtCase.messages.push({
+        role: 'assistant',
+        content: response,
+      });
 
       const embed = new EmbedBuilder()
-        .setColor(0x8B4513) // Brown/wood color for courthouse vibes
+        .setColor(0x8B4513)
         .setTitle('🏛️ MYSTIC COURT OF DISCORD 🏛️')
-        .setDescription(verdict)
+        .setDescription(response.slice(0, 4096))
         .addFields(
           { name: '👨‍⚖️ Plaintiff', value: `<@${interaction.user.id}>`, inline: true },
           { name: '👤 Defendant', value: `<@${defendant.id}>`, inline: true },
         )
-        .setFooter({ text: '⚖️ Justice has been served • This is for entertainment only' })
+        .setFooter({ text: '⚖️ Reply to this message to respond to the judge • Case expires in 5 min' })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      const sentMessage = await interaction.editReply({ embeds: [embed] });
+      courtCase.lastBotMessageId = sentMessage.id;
+
+      // Set up timeout with a dummy message for the channel
+      const channel = interaction.channel;
+      if (channel && 'send' in channel) {
+        courtCase.timeout = setTimeout(async () => {
+          activeCases.delete(interaction.channelId);
+          console.log(`[Sue] Court case expired in channel ${interaction.channelId}`);
+          
+          try {
+            const timeoutEmbed = new EmbedBuilder()
+              .setColor(0x8B4513)
+              .setTitle('🏛️ COURT ADJOURNED 🏛️')
+              .setDescription('*The judge has left the courtroom due to inactivity.*\n\n**Case dismissed due to abandonment.** Both parties may file again if they wish to continue.')
+              .setFooter({ text: '⚖️ Session expired after 5 minutes of inactivity' })
+              .setTimestamp();
+            
+            await channel.send({ embeds: [timeoutEmbed] });
+          } catch (err) {
+            console.error('[Sue] Failed to send timeout message:', err);
+          }
+        }, CASE_TIMEOUT_MS);
+      }
+
     } catch (error) {
       console.error('[Sue] Error:', error);
+      clearCase(interaction.channelId);
 
       const errorEmbed = new EmbedBuilder()
         .setColor(0xe74c3c)
@@ -214,4 +482,6 @@ const command: Command = {
   },
 };
 
-export = command;
+module.exports = command;
+module.exports.getActiveCase = getActiveCase;
+module.exports.handleCourtReply = handleCourtReply;
