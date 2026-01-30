@@ -5,8 +5,6 @@ import dotenv from 'dotenv';
 import type { MysticClient, Command } from './types';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { hasActiveConversation } = require('./commands/utility/help');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getActiveCase, handleCourtReply } = require('./commands/fun/sue');
 import { handleChillAssistant, isBotMentionOrReply } from './utils/chillAssistant';
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
@@ -183,16 +181,6 @@ client.on(Events.MessageCreate, async message => {
       }
     } catch {
       // Failed to fetch referenced message
-    }
-  }
-
-  // Handle replies for active court cases (sue command)
-  if (client.user && message.reference?.messageId && getActiveCase(message.channel.id)) {
-    try {
-      const handled = await handleCourtReply(message);
-      if (handled) return;
-    } catch (error) {
-      console.error('[Sue via reply] Error:', error);
     }
   }
 
