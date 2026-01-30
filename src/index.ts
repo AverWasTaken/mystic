@@ -14,6 +14,7 @@ import { setSnipe } from './utils/snipe';
 import { logMessageEdit, logMessageDelete, logMemberJoin, logMemberLeave } from './utils/logs';
 import { handleStarboardReaction } from './utils/starboard';
 import { initPrefixSystem, getMatchedPrefix, DEFAULT_PREFIX } from './utils/prefixes';
+import { startReminderLoop } from './utils/reminders';
 
 dotenv.config();
 
@@ -320,6 +321,9 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Initialize prefix system (load cache)
   await initPrefixSystem();
+
+  // Start reminder check loop
+  startReminderLoop(client);
 
   // Build slash command data from loaded commands
   const slashCommands = [];

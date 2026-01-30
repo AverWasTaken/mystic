@@ -37,4 +37,16 @@ export default defineSchema({
     timestamp: v.number(),
     status: v.optional(v.string()),
   }).index("by_timestamp", ["timestamp"]),
+
+  reminders: defineTable({
+    userId: v.string(),
+    channelId: v.string(),
+    guildId: v.string(),
+    message: v.string(),
+    fireAt: v.number(),
+    createdAt: v.number(),
+    fired: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_fireAt", ["fireAt"]),
 });
