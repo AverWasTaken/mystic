@@ -50,7 +50,7 @@ const command: Command = {
           new EmbedBuilder()
             .setColor(0xFF5555)
             .setTitle('❌ Invalid Format')
-            .setDescription('Usage: `!poll "Your question" option1, option2, option3`')
+            .setDescription('Usage: `m!poll "Your question" option1, option2, option3`')
         ]
       });
       return;

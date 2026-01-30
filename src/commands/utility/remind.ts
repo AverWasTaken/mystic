@@ -68,7 +68,7 @@ const command: Command = {
           new EmbedBuilder()
             .setColor(0xFF5555)
             .setTitle('❌ Invalid Usage')
-            .setDescription('Usage: `!remind <time> <message>`\nExample: `!remind 1h Take a break`')
+            .setDescription('Usage: `m!remind <time> <message>`\nExample: `m!remind 1h Take a break`')
         ]
       });
       return;
