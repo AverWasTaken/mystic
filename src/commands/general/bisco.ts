@@ -1,7 +1,7 @@
 import { Message, ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../../types';
 
-const BISCO_MESSAGE = 'bisco has been editing for 3 years. he does aesthetic, flow and mograph with aesthetic as his main style. you can check his presets at his payhip https://payhip.com/bisco';
+const BISCO_MESSAGE = 'bisco has been editing for 3 years. he does aesthetic, flow and mograph with aesthetic as his main style. you can check his stuff at https://www.biscovfx.com/';
 
 const command: Command = {
   name: 'bisco',
