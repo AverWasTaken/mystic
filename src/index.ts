@@ -15,6 +15,7 @@ import { logMessageEdit, logMessageDelete, logMemberJoin, logMemberLeave } from 
 import { handleStarboardReaction } from './utils/starboard';
 import { initPrefixSystem, getMatchedPrefix, DEFAULT_PREFIX } from './utils/prefixes';
 import { startReminderLoop } from './utils/reminders';
+import { checkAutomod } from './utils/automod';
 
 dotenv.config();
 
@@ -77,6 +78,11 @@ const AFK_PURPLE = 0x9B59B6;
 client.on(Events.MessageCreate, async message => {
   // Ignore bots
   if (message.author.bot) return;
+
+  // === Automod ===
+  // Check for slurs and take action if found
+  const automodHandled = await checkAutomod(message);
+  if (automodHandled) return; // Message was deleted, stop processing
 
   // === AFK System ===
   // Check if the message author is AFK and remove their status
