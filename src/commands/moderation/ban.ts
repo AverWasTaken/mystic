@@ -1,5 +1,9 @@
-import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import type { Command } from '../../types';
+
+const PERMISSION_DENIED_EMBED = new EmbedBuilder()
+  .setColor(0xED4245)
+  .setDescription('❌ You don\'t have permission to use this command.');
 
 const command: Command = {
   name: 'ban',
@@ -18,11 +22,11 @@ const command: Command = {
         .setDescription('Reason for the ban')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(message: Message, args: string[]): Promise<void> {
-    if (!message.member?.permissions.has(PermissionFlagsBits.BanMembers)) {
-      await message.reply('You do not have permission to ban members.');
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      await message.reply({ embeds: [PERMISSION_DENIED_EMBED] });
       return;
     }
 
@@ -50,6 +54,11 @@ const command: Command = {
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ embeds: [PERMISSION_DENIED_EMBED], ephemeral: true });
+      return;
+    }
+
     const user = interaction.options.getUser('user', true);
     const reason = interaction.options.getString('reason') || 'No reason provided';
 

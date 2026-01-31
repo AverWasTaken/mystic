@@ -1,5 +1,9 @@
-import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, TextChannel, Collection } from 'discord.js';
+import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, TextChannel, Collection, EmbedBuilder } from 'discord.js';
 import type { Command } from '../../types';
+
+const PERMISSION_DENIED_EMBED = new EmbedBuilder()
+  .setColor(0xED4245)
+  .setDescription('❌ You don\'t have permission to use this command.');
 
 const command: Command = {
   name: 'purge',
@@ -21,11 +25,11 @@ const command: Command = {
         .setDescription('Only delete messages from this user')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(message: Message, args: string[]): Promise<void> {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) {
-      await message.reply('You need the Manage Messages permission to use this command.');
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      await message.reply({ embeds: [PERMISSION_DENIED_EMBED] });
       return;
     }
 
@@ -77,6 +81,11 @@ const command: Command = {
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ embeds: [PERMISSION_DENIED_EMBED], ephemeral: true });
+      return;
+    }
+
     const amount = interaction.options.getInteger('amount', true);
     const targetUser = interaction.options.getUser('user');
     const channel = interaction.channel as TextChannel;

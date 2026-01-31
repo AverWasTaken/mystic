@@ -1,7 +1,11 @@
-import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember, EmbedBuilder } from 'discord.js';
 import ms from 'ms';
 import type { StringValue } from 'ms';
 import type { Command } from '../../types';
+
+const PERMISSION_DENIED_EMBED = new EmbedBuilder()
+  .setColor(0xED4245)
+  .setDescription('❌ You don\'t have permission to use this command.');
 
 const command: Command = {
   name: 'timeout',
@@ -25,11 +29,11 @@ const command: Command = {
         .setDescription('Reason for the timeout')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(message: Message, args: string[]): Promise<void> {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-      await message.reply('You do not have permission to timeout members.');
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      await message.reply({ embeds: [PERMISSION_DENIED_EMBED] });
       return;
     }
 
@@ -64,6 +68,11 @@ const command: Command = {
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ embeds: [PERMISSION_DENIED_EMBED], ephemeral: true });
+      return;
+    }
+
     const user = interaction.options.getUser('user', true);
     const durationStr = interaction.options.getString('duration', true);
     const reason = interaction.options.getString('reason') || 'No reason provided';

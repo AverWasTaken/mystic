@@ -4,6 +4,10 @@ import { clearWarnings } from '../../utils/warnings';
 
 const PURPLE = 0x9B59B6;
 
+const PERMISSION_DENIED_EMBED = new EmbedBuilder()
+  .setColor(0xED4245)
+  .setDescription('❌ You don\'t have permission to use this command.');
+
 const command: Command = {
   name: 'clearwarnings',
   description: "Clear all warnings for a user. Usage: m!clearwarnings @user",
@@ -16,11 +20,11 @@ const command: Command = {
         .setDescription('The user to clear warnings for')
         .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(message: Message, args: string[]): Promise<void> {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-      await message.reply('You do not have permission to clear warnings.');
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      await message.reply({ embeds: [PERMISSION_DENIED_EMBED] });
       return;
     }
 
@@ -46,6 +50,11 @@ const command: Command = {
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ embeds: [PERMISSION_DENIED_EMBED], ephemeral: true });
+      return;
+    }
+
     const user = interaction.options.getUser('user', true);
     const clearedCount = await clearWarnings(user.id);
 

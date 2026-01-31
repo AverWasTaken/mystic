@@ -1,5 +1,9 @@
-import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, GuildMember, EmbedBuilder } from 'discord.js';
 import type { Command } from '../../types';
+
+const PERMISSION_DENIED_EMBED = new EmbedBuilder()
+  .setColor(0xED4245)
+  .setDescription('❌ You don\'t have permission to use this command.');
 
 const command: Command = {
   name: 'untime',
@@ -13,11 +17,11 @@ const command: Command = {
         .setDescription('The user to remove timeout from')
         .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(message: Message, args: string[]): Promise<void> {
-    if (!message.member?.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-      await message.reply('You do not have permission to manage timeouts.');
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      await message.reply({ embeds: [PERMISSION_DENIED_EMBED] });
       return;
     }
 
@@ -44,6 +48,11 @@ const command: Command = {
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ embeds: [PERMISSION_DENIED_EMBED], ephemeral: true });
+      return;
+    }
+
     const user = interaction.options.getUser('user', true);
     const member = interaction.guild?.members.cache.get(user.id) as GuildMember | undefined;
 

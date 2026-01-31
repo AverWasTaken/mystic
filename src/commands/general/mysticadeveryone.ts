@@ -1,4 +1,4 @@
-import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { Message, ChatInputCommandInteraction, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import type { Command } from '../../types';
 
 const MYSTIC_AD = `# 𝐌𝐲𝐬𝐭𝐢𝐜┃Editing and Resources
@@ -17,6 +17,10 @@ Your ultimate source to up your editing skills.
 And you! <:w_whitestar:1466392991597068553>
 [Join Mystic now.](https://discord.gg/M7Z7BquZCS)`;
 
+const PERMISSION_DENIED_EMBED = new EmbedBuilder()
+  .setColor(0xED4245)
+  .setDescription('❌ You don\'t have permission to use this command.');
+
 const command: Command = {
   name: 'mysticadeveryone',
   description: 'Our servers ad!',
@@ -24,14 +28,22 @@ const command: Command = {
   slashData: new SlashCommandBuilder()
     .setName('mysticadeveryone')
     .setDescription('Our servers ad with @everyone!')
-    .setDefaultMemberPermissions(PermissionFlagsBits.MentionEveryone),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(message: Message): Promise<void> {
+    if (!message.member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      await message.reply({ embeds: [PERMISSION_DENIED_EMBED] });
+      return;
+    }
     await message.reply(`${MYSTIC_AD}
  @everyone <@${message.author.id}>!`);
   },
 
   async executeSlash(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ embeds: [PERMISSION_DENIED_EMBED], ephemeral: true });
+      return;
+    }
     await interaction.reply(`${MYSTIC_AD}
  @everyone <@${interaction.user.id}>!`);
   }
