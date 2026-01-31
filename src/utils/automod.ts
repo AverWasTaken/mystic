@@ -3,8 +3,7 @@ import { Message, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
 const TIMEOUT_DURATION = 6 * 60 * 60 * 1000; // 6 hours in ms
 const LOG_CHANNEL_ID = '1466338943753785390'; // staff-logs
 
-// Build detection pattern for the slur (obfuscated)
-// Base: n-i-g-g-a / n-i-g-g-e-r
+// Build detection pattern for slurs (obfuscated)
 const buildPattern = (): RegExp => {
   // Letter substitutions for evasion detection
   const n = '[nñ]';
@@ -13,15 +12,22 @@ const buildPattern = (): RegExp => {
   const a = '[a@4àáâã]';
   const e = '[e3èéêë]';
   const r = '[r]';
+  const f = '[f]';
+  const o = '[o0òóôõ]';
+  const t = '[t7]';
   
   // Optional separators between letters (NO spaces - too many false positives)
   const sep = '[\\-_.*]*';
   
-  // Build patterns for variants - only the full slur, not short forms
+  // N-word patterns
   const softA = `${n}${sep}${i}${sep}${g}${sep}${g}${sep}${a}`;
   const hardR = `${n}${sep}${i}${sep}${g}${sep}${g}${sep}${e}${sep}${r}`;
   
-  return new RegExp(`(${softA}|${hardR})`, 'i');
+  // F-slur patterns (word boundary to avoid false positives like "flag")
+  const fSlurLong = `${f}${sep}${a}${sep}${g}${sep}${g}${sep}${o}${sep}${t}`;
+  const fSlurShort = `\\b${f}${sep}${a}${sep}${g}\\b`;
+  
+  return new RegExp(`(${softA}|${hardR}|${fSlurLong}|${fSlurShort})`, 'i');
 };
 
 const slurPattern = buildPattern();
