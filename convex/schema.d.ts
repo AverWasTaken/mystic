@@ -85,6 +85,23 @@ declare const _default: import("convex/server").SchemaDefinition<{
         by_userId: ["userId", "_creationTime"];
         by_fireAt: ["fireAt", "_creationTime"];
     }, {}, {}>;
+    invites: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        inviteCode?: string | undefined;
+        guildId: string;
+        userId: string;
+        timestamp: number;
+        inviterId: string;
+    }, {
+        guildId: import("convex/values").VString<string, "required">;
+        userId: import("convex/values").VString<string, "required">;
+        inviterId: import("convex/values").VString<string, "required">;
+        inviteCode: import("convex/values").VString<string | undefined, "optional">;
+        timestamp: import("convex/values").VFloat64<number, "required">;
+    }, "required", "guildId" | "userId" | "timestamp" | "inviterId" | "inviteCode">, {
+        by_guildId: ["guildId", "_creationTime"];
+        by_inviterId: ["inviterId", "_creationTime"];
+        by_guildId_inviterId: ["guildId", "inviterId", "_creationTime"];
+    }, {}, {}>;
 }, true>;
 export default _default;
 //# sourceMappingURL=schema.d.ts.map

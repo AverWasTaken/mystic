@@ -44,5 +44,15 @@ exports.default = (0, server_1.defineSchema)({
     })
         .index("by_userId", ["userId"])
         .index("by_fireAt", ["fireAt"]),
+    invites: (0, server_1.defineTable)({
+        guildId: values_1.v.string(),
+        userId: values_1.v.string(),
+        inviterId: values_1.v.string(),
+        inviteCode: values_1.v.optional(values_1.v.string()),
+        timestamp: values_1.v.number(),
+    })
+        .index("by_guildId", ["guildId"])
+        .index("by_inviterId", ["inviterId"])
+        .index("by_guildId_inviterId", ["guildId", "inviterId"]),
 });
 //# sourceMappingURL=schema.js.map

@@ -11,6 +11,7 @@
 import type * as afk from "../afk.js";
 import type * as economy from "../economy.js";
 import type * as featureRequests from "../featureRequests.js";
+import type * as invites from "../invites.js";
 import type * as prefixes from "../prefixes.js";
 import type * as reminders from "../reminders.js";
 import type * as warnings from "../warnings.js";
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   afk: typeof afk;
   economy: typeof economy;
   featureRequests: typeof featureRequests;
+  invites: typeof invites;
   prefixes: typeof prefixes;
   reminders: typeof reminders;
   warnings: typeof warnings;

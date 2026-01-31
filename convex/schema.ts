@@ -49,4 +49,15 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_fireAt", ["fireAt"]),
+
+  invites: defineTable({
+    guildId: v.string(),
+    userId: v.string(),
+    inviterId: v.string(),
+    inviteCode: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_guildId", ["guildId"])
+    .index("by_inviterId", ["inviterId"])
+    .index("by_guildId_inviterId", ["guildId", "inviterId"]),
 });

@@ -22,6 +22,7 @@ import { setupTikTokNotify } from './utils/tiktokNotify';
 import { getAfk, getAfkByIds, removeAfk, formatDuration } from './utils/afk';
 import { setSnipe } from './utils/snipe';
 import { logMessageEdit, logMessageDelete, logMemberJoin, logMemberLeave } from './utils/logs';
+import { initInviteTracker, handleMemberJoin, refreshInviteCache } from './utils/inviteTracker';
 import { handleStarboardReaction } from './utils/starboard';
 import { initPrefixSystem, getMatchedPrefix, DEFAULT_PREFIX } from './utils/prefixes';
 import { startReminderLoop } from './utils/reminders';
@@ -37,7 +38,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites
   ],
   partials: [
     Partials.Message,
@@ -280,6 +282,8 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
 // Handle member joins
 client.on(Events.GuildMemberAdd, async member => {
   await logMemberJoin(client, member);
+  // Track invites (logs to staff-logs channel)
+  await handleMemberJoin(member);
 });
 
 // Handle member leaves
@@ -287,6 +291,19 @@ client.on(Events.GuildMemberRemove, async member => {
   // GuildMemberRemove can receive a partial member, but we need GuildMember
   // The partials allow us to still get the user info even if they weren't cached
   await logMemberLeave(client, member as import('discord.js').GuildMember);
+});
+
+// Refresh invite cache when invites are created/deleted
+client.on(Events.InviteCreate, async invite => {
+  if (invite.guild) {
+    await refreshInviteCache(client, invite.guild.id);
+  }
+});
+
+client.on(Events.InviteDelete, async invite => {
+  if (invite.guild) {
+    await refreshInviteCache(client, invite.guild.id);
+  }
 });
 
 // Handle slash commands
@@ -340,6 +357,9 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Start reminder check loop
   startReminderLoop(client);
+
+  // Initialize invite tracker
+  await initInviteTracker(client);
 
   // Build slash command data from loaded commands
   const slashCommands = [];
