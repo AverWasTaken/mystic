@@ -1,6 +1,7 @@
-import { Message, ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { Message, ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, GuildMember } from 'discord.js';
 import type { Command } from '../../types';
 import { getBalance, addBalance, subtractBalance, parseBetAmount, hasEnough } from '../../utils/economy';
+import { isBooster, BOOSTER_GAMBLING_MULTIPLIER } from '../../utils/boosterCheck';
 
 type CoinSide = 'heads' | 'tails';
 
@@ -61,22 +62,32 @@ const command: Command = {
       return;
     }
 
+    const member = message.member as GuildMember | null;
+    const boosted = isBooster(member);
     const result = flipCoin();
     const won = result === choice;
     
     let newBalance: number;
+    let actualWinnings = betAmount;
+    let bonusText = '';
+    
     if (won) {
-      newBalance = await addBalance(message.author.id, betAmount);
+      // Apply booster bonus to winnings
+      if (boosted) {
+        actualWinnings = Math.floor(betAmount * BOOSTER_GAMBLING_MULTIPLIER);
+        bonusText = `\n🚀 **Booster Bonus: ${BOOSTER_GAMBLING_MULTIPLIER}x!** (+${(actualWinnings - betAmount).toLocaleString()} coins)`;
+      }
+      newBalance = await addBalance(message.author.id, actualWinnings);
     } else {
       newBalance = await subtractBalance(message.author.id, betAmount);
     }
 
     const emoji = result === 'heads' ? '🪙' : '⚪';
     const embed = new EmbedBuilder()
-      .setColor(won ? 0x00FF00 : 0xFF0000)
+      .setColor(won ? (boosted ? 0xF47FFF : 0x00FF00) : 0xFF0000)
       .setTitle(`${emoji} Coinflip - ${result.toUpperCase()}!`)
       .setDescription(won 
-        ? `🎉 You won **${betAmount.toLocaleString()}** coins!`
+        ? `🎉 You won **${actualWinnings.toLocaleString()}** coins!${bonusText}`
         : `💸 You lost **${betAmount.toLocaleString()}** coins...`)
       .addFields(
         { name: 'Your Choice', value: choice, inline: true },
@@ -104,22 +115,32 @@ const command: Command = {
       return;
     }
 
+    const member = interaction.member as GuildMember | null;
+    const boosted = isBooster(member);
     const result = flipCoin();
     const won = result === choice;
     
     let newBalance: number;
+    let actualWinnings = betAmount;
+    let bonusText = '';
+    
     if (won) {
-      newBalance = await addBalance(interaction.user.id, betAmount);
+      // Apply booster bonus to winnings
+      if (boosted) {
+        actualWinnings = Math.floor(betAmount * BOOSTER_GAMBLING_MULTIPLIER);
+        bonusText = `\n🚀 **Booster Bonus: ${BOOSTER_GAMBLING_MULTIPLIER}x!** (+${(actualWinnings - betAmount).toLocaleString()} coins)`;
+      }
+      newBalance = await addBalance(interaction.user.id, actualWinnings);
     } else {
       newBalance = await subtractBalance(interaction.user.id, betAmount);
     }
 
     const emoji = result === 'heads' ? '🪙' : '⚪';
     const embed = new EmbedBuilder()
-      .setColor(won ? 0x00FF00 : 0xFF0000)
+      .setColor(won ? (boosted ? 0xF47FFF : 0x00FF00) : 0xFF0000)
       .setTitle(`${emoji} Coinflip - ${result.toUpperCase()}!`)
       .setDescription(won 
-        ? `🎉 You won **${betAmount.toLocaleString()}** coins!`
+        ? `🎉 You won **${actualWinnings.toLocaleString()}** coins!${bonusText}`
         : `💸 You lost **${betAmount.toLocaleString()}** coins...`)
       .addFields(
         { name: 'Your Choice', value: choice, inline: true },

@@ -7,10 +7,12 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
-  ButtonInteraction
+  ButtonInteraction,
+  GuildMember
 } from 'discord.js';
 import type { Command } from '../../types';
 import { getBalance, addBalance, subtractBalance, parseBetAmount, hasEnough } from '../../utils/economy';
+import { isBooster, BOOSTER_GAMBLING_MULTIPLIER } from '../../utils/boosterCheck';
 
 interface Card {
   suit: string;
@@ -24,6 +26,7 @@ interface GameState {
   deck: Card[];
   bet: number;
   userId: string;
+  isBooster: boolean;
 }
 
 const suits = ['♠️', '♥️', '♦️', '♣️'];
@@ -88,18 +91,18 @@ function createGameEmbed(
   
   const colors = {
     playing: 0x0099FF,
-    win: 0x00FF00,
+    win: game.isBooster ? 0xF47FFF : 0x00FF00,
     lose: 0xFF0000,
     push: 0xFFFF00,
-    blackjack: 0xFFD700
+    blackjack: game.isBooster ? 0xF47FFF : 0xFFD700
   };
 
   const titles = {
     playing: '🃏 Blackjack',
-    win: '🎉 You Win!',
+    win: game.isBooster ? '🚀 You Win! (Boosted)' : '🎉 You Win!',
     lose: '💸 You Lose!',
     push: '🤝 Push!',
-    blackjack: '🎰 BLACKJACK!'
+    blackjack: game.isBooster ? '🚀 BLACKJACK! (Boosted)' : '🎰 BLACKJACK!'
   };
 
   const embed = new EmbedBuilder()
@@ -120,14 +123,24 @@ function createGameEmbed(
     );
 
   if (status !== 'playing' && newBalance !== undefined) {
-    let winnings = 0;
-    if (status === 'blackjack') winnings = Math.floor(game.bet * 1.5);
-    else if (status === 'win') winnings = game.bet;
-    else if (status === 'push') winnings = 0;
-    else winnings = -game.bet;
+    let baseWinnings = 0;
+    if (status === 'blackjack') baseWinnings = Math.floor(game.bet * 1.5);
+    else if (status === 'win') baseWinnings = game.bet;
+    else if (status === 'push') baseWinnings = 0;
+    else baseWinnings = -game.bet;
+
+    let actualWinnings = baseWinnings;
+    let bonusText = '';
+    
+    // Apply booster bonus to winnings (only on wins)
+    if (game.isBooster && baseWinnings > 0) {
+      actualWinnings = Math.floor(baseWinnings * BOOSTER_GAMBLING_MULTIPLIER);
+      const bonusAmount = actualWinnings - baseWinnings;
+      bonusText = `\n🚀 Booster Bonus: +${bonusAmount.toLocaleString()} coins`;
+    }
 
     embed.addFields(
-      { name: winnings >= 0 ? 'Winnings' : 'Loss', value: `${Math.abs(winnings).toLocaleString()} coins`, inline: true },
+      { name: actualWinnings >= 0 ? 'Winnings' : 'Loss', value: `${Math.abs(actualWinnings).toLocaleString()} coins${bonusText}`, inline: true },
       { name: 'New Balance', value: `${newBalance.toLocaleString()} coins`, inline: true }
     );
   }
@@ -178,9 +191,17 @@ function determineOutcome(game: GameState): 'win' | 'lose' | 'push' | 'blackjack
 
 async function handleGameEnd(game: GameState, outcome: 'win' | 'lose' | 'push' | 'blackjack'): Promise<number> {
   if (outcome === 'blackjack') {
-    return await addBalance(game.userId, Math.floor(game.bet * 2.5)); // Get back bet + 1.5x winnings
+    let winnings = Math.floor(game.bet * 1.5); // Base blackjack pays 1.5x
+    if (game.isBooster) {
+      winnings = Math.floor(winnings * BOOSTER_GAMBLING_MULTIPLIER);
+    }
+    return await addBalance(game.userId, game.bet + winnings); // Get back bet + winnings
   } else if (outcome === 'win') {
-    return await addBalance(game.userId, game.bet * 2); // Get back bet + winnings
+    let winnings = game.bet;
+    if (game.isBooster) {
+      winnings = Math.floor(winnings * BOOSTER_GAMBLING_MULTIPLIER);
+    }
+    return await addBalance(game.userId, game.bet + winnings); // Get back bet + winnings
   } else if (outcome === 'push') {
     return await addBalance(game.userId, game.bet); // Get back bet
   }
@@ -282,13 +303,17 @@ const command: Command = {
     // Deduct bet upfront
     await subtractBalance(message.author.id, betAmount);
 
+    const member = message.member as GuildMember | null;
+    const boosted = isBooster(member);
+    
     const deck = createDeck();
     const game: GameState = {
       playerHand: [drawCard(deck), drawCard(deck)],
       dealerHand: [drawCard(deck), drawCard(deck)],
       deck,
       bet: betAmount,
-      userId: message.author.id
+      userId: message.author.id,
+      isBooster: boosted
     };
 
     // Check for immediate blackjack
@@ -329,13 +354,17 @@ const command: Command = {
     // Deduct bet upfront
     await subtractBalance(interaction.user.id, betAmount);
 
+    const member = interaction.member as GuildMember | null;
+    const boosted = isBooster(member);
+    
     const deck = createDeck();
     const game: GameState = {
       playerHand: [drawCard(deck), drawCard(deck)],
       dealerHand: [drawCard(deck), drawCard(deck)],
       deck,
       bet: betAmount,
-      userId: interaction.user.id
+      userId: interaction.user.id,
+      isBooster: boosted
     };
 
     // Check for immediate blackjack
