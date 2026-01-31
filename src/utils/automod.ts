@@ -44,28 +44,42 @@ export async function checkAutomod(message: Message): Promise<boolean> {
   
   if (slurPattern.test(content)) {
     try {
-      // Delete the message
-      await message.delete();
-      
-      // Timeout the user
+      // Timeout the user FIRST (before delete, in case another bot deletes it)
+      let timedOut = false;
       if (member?.moderatable) {
-        await member.timeout(TIMEOUT_DURATION, 'Automod: Racial slur detected');
+        try {
+          await member.timeout(TIMEOUT_DURATION, 'Automod: Racial slur detected');
+          timedOut = true;
+        } catch (timeoutErr) {
+          console.error('[Automod] Failed to timeout user:', timeoutErr);
+        }
+      } else {
+        console.log(`[Automod] Cannot timeout ${message.author.tag} - not moderatable (higher role or missing perms)`);
       }
       
-      // Send public shame embed in the channel
+      // Delete the message (may fail if already deleted by Discord AutoMod)
       try {
-        if (message.channel.isTextBased() && 'send' in message.channel) {
-          const publicEmbed = new EmbedBuilder()
-            .setColor(0xFF0000)
-            .setTitle('🚫 User Muted')
-            .setDescription(`**${message.author.username}** has been muted for 6 hours.\n\n**Reason:** Racism is not tolerated here.`)
-            .setThumbnail(message.author.displayAvatarURL())
-            .setTimestamp();
-          
-          await message.channel.send({ embeds: [publicEmbed] });
+        await message.delete();
+      } catch (deleteErr) {
+        console.log('[Automod] Message already deleted (probably by Discord AutoMod)');
+      }
+      
+      // Send public shame embed in the channel (only if we actually timed them out)
+      if (timedOut) {
+        try {
+          if (message.channel.isTextBased() && 'send' in message.channel) {
+            const publicEmbed = new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle('🚫 User Muted')
+              .setDescription(`**${message.author.username}** has been muted for 6 hours.\n\n**Reason:** Racism is not tolerated here.`)
+              .setThumbnail(message.author.displayAvatarURL())
+              .setTimestamp();
+            
+            await message.channel.send({ embeds: [publicEmbed] });
+          }
+        } catch (publicErr) {
+          console.error('[Automod] Failed to send public embed:', publicErr);
         }
-      } catch (publicErr) {
-        console.error('[Automod] Failed to send public embed:', publicErr);
       }
 
       // Log to staff channel
