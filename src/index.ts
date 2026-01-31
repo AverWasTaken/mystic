@@ -1,6 +1,12 @@
 import dns from 'node:dns';
-// Force IPv4 first to fix Convex connectivity issues
+import https from 'node:https';
+import { Agent, setGlobalDispatcher } from 'undici';
+
+// Force IPv4 to fix Convex connectivity issues (IPv6 not working on this server)
 dns.setDefaultResultOrder('ipv4first');
+setGlobalDispatcher(new Agent({ connect: { lookup: (hostname, options, callback) => {
+  dns.lookup(hostname, { ...options, family: 4 }, callback);
+}}}));
 
 import fs from 'node:fs';
 import path from 'node:path';
