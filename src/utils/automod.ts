@@ -17,11 +17,12 @@ const buildPattern = (): RegExp => {
   // Optional separators between letters
   const sep = '[\\s\\-_.*]*';
   
-  // Build patterns for both variants
+  // Build patterns for variants
   const softA = `${n}${sep}${i}${sep}${g}${sep}${g}${sep}${a}`;
   const hardR = `${n}${sep}${i}${sep}${g}${sep}${g}${sep}${e}${sep}${r}`;
+  const short = `${n}${sep}${g}${sep}${a}`; // nga variant
   
-  return new RegExp(`(${softA}|${hardR})`, 'i');
+  return new RegExp(`(${softA}|${hardR}|${short})`, 'i');
 };
 
 const slurPattern = buildPattern();
