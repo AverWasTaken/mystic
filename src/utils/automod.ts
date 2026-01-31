@@ -14,15 +14,14 @@ const buildPattern = (): RegExp => {
   const e = '[e3èéêë]';
   const r = '[r]';
   
-  // Optional separators between letters
-  const sep = '[\\s\\-_.*]*';
+  // Optional separators between letters (NO spaces - too many false positives)
+  const sep = '[\\-_.*]*';
   
-  // Build patterns for variants
+  // Build patterns for variants - only the full slur, not short forms
   const softA = `${n}${sep}${i}${sep}${g}${sep}${g}${sep}${a}`;
   const hardR = `${n}${sep}${i}${sep}${g}${sep}${g}${sep}${e}${sep}${r}`;
-  const short = `${n}${sep}${g}${sep}${a}`; // nga variant
   
-  return new RegExp(`(${softA}|${hardR}|${short})`, 'i');
+  return new RegExp(`(${softA}|${hardR})`, 'i');
 };
 
 const slurPattern = buildPattern();
