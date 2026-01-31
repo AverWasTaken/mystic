@@ -53,6 +53,22 @@ export async function checkAutomod(message: Message): Promise<boolean> {
         await member.timeout(TIMEOUT_DURATION, 'Automod: Racial slur detected');
       }
       
+      // Send public shame embed in the channel
+      try {
+        if (message.channel.isTextBased() && 'send' in message.channel) {
+          const publicEmbed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('🚫 User Muted')
+            .setDescription(`**${message.author.username}** has been muted for 6 hours.\n\n**Reason:** Racism is not tolerated here.`)
+            .setThumbnail(message.author.displayAvatarURL())
+            .setTimestamp();
+          
+          await message.channel.send({ embeds: [publicEmbed] });
+        }
+      } catch (publicErr) {
+        console.error('[Automod] Failed to send public embed:', publicErr);
+      }
+
       // Log to staff channel
       try {
         const logChannel = await message.client.channels.fetch(LOG_CHANNEL_ID);
