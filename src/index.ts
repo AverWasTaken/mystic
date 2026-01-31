@@ -19,6 +19,7 @@ import { handleChillAssistant, isBotMentionOrReply } from './utils/chillAssistan
 import { setupReactionRoles } from './utils/reactionRoles';
 import { setupWelcome } from './utils/welcome';
 import { setupTikTokNotify } from './utils/tiktokNotify';
+import { setupBoostHandler } from './utils/boostHandler';
 import { getAfk, getAfkByIds, removeAfk, formatDuration } from './utils/afk';
 import { setSnipe } from './utils/snipe';
 import { logMessageEdit, logMessageDelete, logMemberJoin, logMemberLeave } from './utils/logs';
@@ -348,6 +349,9 @@ client.once(Events.ClientReady, async readyClient => {
 
   // Setup welcome system
   setupWelcome(client);
+
+  // Setup boost thank you system
+  setupBoostHandler(client);
 
   // Setup TikTok notifications
   setupTikTokNotify(client);
