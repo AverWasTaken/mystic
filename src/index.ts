@@ -1,3 +1,7 @@
+import dns from 'node:dns';
+// Force IPv4 first to fix Convex connectivity issues
+dns.setDefaultResultOrder('ipv4first');
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { Client, Collection, GatewayIntentBits, Events, REST, Routes, ActivityType, Partials, EmbedBuilder } from 'discord.js';
