@@ -1,6 +1,6 @@
 import { Client, Events, EmbedBuilder, TextChannel } from 'discord.js';
 
-const WELCOME_CHANNEL_ID = '1466085574183096321';
+const BOOSTS_CHANNEL_ID = '1465877479402111231';
 const BOOSTER_PERKS_CHANNEL_ID = '1465872910723055770';
 const BOOST_COLOR = 0xF47FFF; // Discord boost pink/purple
 
@@ -21,10 +21,10 @@ export function setupBoostHandler(client: Client): void {
       }
 
       // User just boosted!
-      const channel = newMember.guild.channels.cache.get(WELCOME_CHANNEL_ID) as TextChannel;
+      const channel = newMember.guild.channels.cache.get(BOOSTS_CHANNEL_ID) as TextChannel;
 
       if (!channel) {
-        console.error(`[BOOST] Could not find welcome channel: ${WELCOME_CHANNEL_ID}`);
+        console.error(`[BOOST] Could not find boosts channel: ${BOOSTS_CHANNEL_ID}`);
         return;
       }
 
